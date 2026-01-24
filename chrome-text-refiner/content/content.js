@@ -21,20 +21,20 @@ let iconElements = new WeakMap();
 async function init() {
   // Load settings
   settings = await loadSettings();
-  
+
   if (!settings.enabled) {
     return;
   }
-  
+
   // Process existing text fields
   processTextFields();
-  
+
   // Set up mutation observer for dynamically added fields
   setupMutationObserver();
-  
+
   // Listen for settings updates
   chrome.runtime.onMessage.addListener(handleMessage);
-  
+
   // Set up keyboard shortcut
   if (settings.enableKeyboardShortcut) {
     document.addEventListener('keydown', handleKeyboardShortcut);
@@ -65,7 +65,7 @@ async function loadSettings() {
 function handleMessage(message, sender, sendResponse) {
   if (message.type === 'SETTINGS_UPDATED') {
     settings = message.settings;
-    
+
     if (!settings.enabled) {
       removeAllIcons();
     } else {
@@ -76,7 +76,7 @@ function handleMessage(message, sender, sendResponse) {
       refineText(activeField);
     }
   }
-  
+
   return true;
 }
 
@@ -87,7 +87,7 @@ function processTextFields() {
   // Find all text input elements
   const textInputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="search"], input:not([type]), textarea');
   const contentEditables = document.querySelectorAll('[contenteditable="true"]');
-  
+
   textInputs.forEach(field => attachIconToField(field));
   contentEditables.forEach(field => attachIconToField(field));
 }
@@ -104,7 +104,7 @@ function setupMutationObserver() {
           if (isTextField(node)) {
             attachIconToField(node);
           }
-          
+
           // Check for text fields within the added node
           const textFields = node.querySelectorAll?.('input[type="text"], input[type="email"], input[type="search"], input:not([type]), textarea, [contenteditable="true"]');
           textFields?.forEach(field => attachIconToField(field));
@@ -112,7 +112,7 @@ function setupMutationObserver() {
       });
     });
   }, DEBOUNCE_DELAY));
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true
@@ -124,16 +124,16 @@ function setupMutationObserver() {
  */
 function isTextField(element) {
   if (!element.tagName) return false;
-  
+
   const tagName = element.tagName.toLowerCase();
-  
+
   if (tagName === 'textarea') return true;
   if (element.getAttribute('contenteditable') === 'true') return true;
   if (tagName === 'input') {
     const type = element.type?.toLowerCase() || 'text';
     return ['text', 'email', 'search', ''].includes(type);
   }
-  
+
   return false;
 }
 
@@ -145,19 +145,19 @@ function attachIconToField(field) {
   if (processedFields.has(field)) return;
   if (!isVisible(field)) return;
   if (field.readOnly || field.disabled) return;
-  
+
   processedFields.add(field);
-  
+
   // Create wrapper if needed for positioning
   const wrapper = createIconWrapper(field);
   const icon = createSparkleIcon(field);
-  
+
   wrapper.appendChild(icon);
   iconElements.set(field, { wrapper, icon });
-  
+
   // Set up event listeners
   setupFieldListeners(field, icon, wrapper);
-  
+
   // Initial visibility check
   updateIconVisibility(field, icon);
 }
@@ -168,12 +168,12 @@ function attachIconToField(field) {
 function createIconWrapper(field) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ai-refiner-wrapper';
-  
+
   // Position the wrapper relative to the field
   const rect = field.getBoundingClientRect();
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  
+
   wrapper.style.cssText = `
     position: absolute;
     top: ${rect.top + scrollTop}px;
@@ -183,29 +183,29 @@ function createIconWrapper(field) {
     pointer-events: none;
     z-index: 2147483647;
   `;
-  
+
   document.body.appendChild(wrapper);
-  
+
   // Update position on scroll and resize
   const updatePosition = debounce(() => {
     if (!document.body.contains(field)) {
       wrapper.remove();
       return;
     }
-    
+
     const newRect = field.getBoundingClientRect();
     const newScrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const newScrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    
+
     wrapper.style.top = `${newRect.top + newScrollTop}px`;
     wrapper.style.left = `${newRect.left + newScrollLeft}px`;
     wrapper.style.width = `${newRect.width}px`;
     wrapper.style.height = `${newRect.height}px`;
   }, 16);
-  
+
   window.addEventListener('scroll', updatePosition, { passive: true });
   window.addEventListener('resize', updatePosition, { passive: true });
-  
+
   return wrapper;
 }
 
@@ -219,7 +219,7 @@ function createSparkleIcon(field) {
   icon.type = 'button';
   icon.title = 'Refine text with AI';
   icon.setAttribute('aria-label', 'Refine text with AI');
-  
+
   icon.style.cssText = `
     position: absolute;
     right: ${ICON_PADDING}px;
@@ -243,7 +243,7 @@ function createSparkleIcon(field) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 2147483647;
   `;
-  
+
   return icon;
 }
 
@@ -256,7 +256,7 @@ function setupFieldListeners(field, icon, wrapper) {
     activeField = field;
     updateIconVisibility(field, icon);
   });
-  
+
   field.addEventListener('blur', () => {
     setTimeout(() => {
       if (activeField === field) {
@@ -265,12 +265,12 @@ function setupFieldListeners(field, icon, wrapper) {
       updateIconVisibility(field, icon);
     }, 200);
   });
-  
+
   // Input event
   field.addEventListener('input', () => {
     updateIconVisibility(field, icon);
   });
-  
+
   // Hover events (if showOnHoverOnly is enabled)
   if (settings.showOnHoverOnly) {
     field.addEventListener('mouseenter', () => {
@@ -278,27 +278,27 @@ function setupFieldListeners(field, icon, wrapper) {
         showIcon(icon);
       }
     });
-    
+
     field.addEventListener('mouseleave', () => {
       if (document.activeElement !== field) {
         hideIcon(icon);
       }
     });
   }
-  
+
   // Icon click handler
   icon.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     await refineText(field);
   });
-  
+
   // Icon hover effects
   icon.addEventListener('mouseenter', () => {
     icon.style.transform = 'translateY(-50%) scale(1.1)';
     icon.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
   });
-  
+
   icon.addEventListener('mouseleave', () => {
     icon.style.transform = 'translateY(-50%) scale(1)';
     icon.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
@@ -313,10 +313,10 @@ function updateIconVisibility(field, icon) {
     hideIcon(icon);
     return;
   }
-  
+
   const hasText = getFieldText(field).trim().length > 0;
   const isFocused = document.activeElement === field;
-  
+
   if (settings.showOnHoverOnly) {
     // Only show on hover (handled by mouseenter/mouseleave)
     if (!isFocused && !hasText) {
@@ -374,30 +374,32 @@ function setFieldText(field, text) {
 }
 
 /**
- * Refine text using AI
+ * Refine text using AI - Inline with Animation
  */
 async function refineText(field) {
   const text = getFieldText(field).trim();
-  
+
   if (!text) {
     showNotification('No text to refine', 'warning');
     return;
   }
-  
+
   const iconData = iconElements.get(field);
-  if (!iconData) return;
-  
-  const { icon } = iconData;
-  
+  // Icon data might be missing if triggered via shortcut on a non-hovered field
+  // Try to find icon if missing, or proceed without icon animation
+  const icon = iconData?.icon;
+
   // Store original text for undo
   if (settings.enableUndo) {
     originalTexts.set(field, text);
   }
-  
+
   // Show loading state
-  icon.innerHTML = '<span class="ai-refiner-spinner"></span>';
-  icon.disabled = true;
-  
+  if (icon) {
+    icon.innerHTML = '<span class="ai-refiner-spinner"></span>';
+    icon.disabled = true;
+  }
+
   try {
     // Send message to background script for API call
     const response = await chrome.runtime.sendMessage({
@@ -406,17 +408,17 @@ async function refineText(field) {
       style: settings.style,
       customInstructions: settings.customInstructions
     });
-    
+
     if (response.error) {
       throw new Error(response.error);
     }
-    
-    // Update field with refined text
-    setFieldText(field, response.refinedText);
-    
+
+    // Update field with refined text safely with animation
+    await animateTextReplacement(field, response.refinedText);
+
     // Show success notification
     showNotification('Text refined successfully!', 'success');
-    
+
     // Add undo option if enabled
     if (settings.enableUndo) {
       showUndoNotification(field);
@@ -426,20 +428,69 @@ async function refineText(field) {
     showNotification(error.message || 'Failed to refine text', 'error');
   } finally {
     // Restore icon
-    icon.innerHTML = '✨';
-    icon.disabled = false;
+    if (icon) {
+      icon.innerHTML = '✨';
+      icon.disabled = false;
+    }
   }
+}
+
+/**
+ * Animate text replacement
+ */
+async function animateTextReplacement(field, newText) {
+  return new Promise(resolve => {
+    // 1. Lock height to prevent layout shift
+    const originalHeight = field.style.height;
+    const computedHeight = window.getComputedStyle(field).height;
+    field.style.height = computedHeight;
+
+    // 2. Blur out
+    field.classList.add('ai-refiner-blur-out');
+
+    setTimeout(() => {
+      // 3. Swap text
+      setFieldText(field, newText);
+
+      // 4. Blur in
+      field.classList.remove('ai-refiner-blur-out');
+      field.classList.add('ai-refiner-blur-in');
+
+      // 5. Success Pulse
+      field.classList.add('ai-refiner-pulse-animation');
+
+      // 6. Cleanup
+      setTimeout(() => {
+        field.style.height = originalHeight;
+        field.classList.remove('ai-refiner-blur-in');
+        field.classList.remove('ai-refiner-pulse-animation');
+        resolve();
+      }, 800);
+    }, 300);
+  });
 }
 
 /**
  * Handle keyboard shortcut
  */
 function handleKeyboardShortcut(e) {
-  // Ctrl+Shift+R or Cmd+Shift+R
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
-    e.preventDefault();
-    
-    if (activeField) {
+  // Check for Command+K (Mac) or Ctrl+K (Windows/Linux)
+  const isCmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k';
+
+  // Also support the configured shortcut (default Ctrl+Shift+R)
+  const isConfiguredShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R';
+
+  if ((isCmdK || isConfiguredShortcut) && settings.enableKeyboardShortcut) {
+    // Check if we are focused on a text field
+    const activeElement = document.activeElement;
+    if (isTextField(activeElement)) {
+      e.preventDefault();
+      e.stopPropagation();
+      refineText(activeElement);
+    } else if (activeField) {
+      // Fallback to last known active field
+      e.preventDefault();
+      e.stopPropagation();
       refineText(activeField);
     }
   }
@@ -454,18 +505,18 @@ function showNotification(message, type = 'info') {
   if (existing) {
     existing.remove();
   }
-  
+
   const notification = document.createElement('div');
   notification.className = `ai-refiner-notification ai-refiner-notification-${type}`;
   notification.textContent = message;
-  
+
   document.body.appendChild(notification);
-  
+
   // Trigger animation
   requestAnimationFrame(() => {
     notification.classList.add('ai-refiner-notification-show');
   });
-  
+
   // Remove after delay
   setTimeout(() => {
     notification.classList.remove('ai-refiner-notification-show');
@@ -481,16 +532,16 @@ function showUndoNotification(field) {
   if (existing) {
     existing.remove();
   }
-  
+
   const undo = document.createElement('div');
   undo.className = 'ai-refiner-undo';
   undo.innerHTML = `
     <span>Text refined</span>
     <button class="ai-refiner-undo-btn">Undo</button>
   `;
-  
+
   document.body.appendChild(undo);
-  
+
   // Add click handler for undo
   undo.querySelector('.ai-refiner-undo-btn').addEventListener('click', () => {
     const original = originalTexts.get(field);
@@ -501,12 +552,12 @@ function showUndoNotification(field) {
     }
     undo.remove();
   });
-  
+
   // Show notification
   requestAnimationFrame(() => {
     undo.classList.add('ai-refiner-undo-show');
   });
-  
+
   // Auto-hide after delay
   setTimeout(() => {
     undo.classList.remove('ai-refiner-undo-show');
@@ -531,7 +582,7 @@ function removeAllIcons() {
 function isVisible(element) {
   const style = window.getComputedStyle(element);
   const rect = element.getBoundingClientRect();
-  
+
   return (
     style.display !== 'none' &&
     style.visibility !== 'hidden' &&

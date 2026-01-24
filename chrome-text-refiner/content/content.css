@@ -3,6 +3,38 @@
  * Styles for injected elements
  */
 
+/* Text Animation */
+.ai-refiner-blur-out {
+  filter: blur(4px) opacity(0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ai-refiner-blur-in {
+  filter: blur(0px) opacity(1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Success Pulse */
+@keyframes ai-refiner-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6);
+    border-color: rgba(99, 102, 241, 0.6);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+    border-color: rgba(99, 102, 241, 0.6);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}
+
+.ai-refiner-pulse-animation {
+  animation: ai-refiner-pulse 0.8s ease-out !important;
+}
+
 /* Icon Wrapper */
 .ai-refiner-wrapper {
   position: absolute;
@@ -71,8 +103,13 @@
 }
 
 @keyframes ai-refiner-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Notification Toast */
@@ -165,7 +202,7 @@
     border-color: rgba(99, 102, 241, 0.4) !important;
     color: white !important;
   }
-  
+
   .ai-refiner-icon:hover {
     background: rgba(30, 41, 59, 1) !important;
   }
@@ -173,12 +210,13 @@
 
 /* Accessibility - Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   .ai-refiner-icon,
   .ai-refiner-notification,
   .ai-refiner-undo {
     transition: none !important;
   }
-  
+
   .ai-refiner-spinner {
     animation: none !important;
   }
@@ -190,7 +228,7 @@
     border-width: 2px !important;
     border-color: #6366f1 !important;
   }
-  
+
   .ai-refiner-notification,
   .ai-refiner-undo {
     border: 2px solid white !important;

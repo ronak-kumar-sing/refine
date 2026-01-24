@@ -11,10 +11,10 @@
  * @returns {Promise<string>} Refined text
  */
 export async function refineWithGemini(text, apiKey, settings) {
-  const { model = 'gemini-1.5-flash', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
-  
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  
+  const { model = 'gemini-2.5-flash', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+
   const requestBody = {
     contents: [
       {
@@ -50,7 +50,7 @@ export async function refineWithGemini(text, apiKey, settings) {
       }
     ]
   };
-  
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -59,24 +59,24 @@ export async function refineWithGemini(text, apiKey, settings) {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response generated from Gemini');
     }
-    
+
     const refinedText = data.candidates[0].content?.parts?.[0]?.text;
-    
+
     if (!refinedText) {
       throw new Error('Empty response from Gemini');
     }
-    
+
     return refinedText.trim();
   } catch (error) {
     if (error.message.includes('API_KEY_INVALID')) {
@@ -98,9 +98,9 @@ export async function refineWithGemini(text, apiKey, settings) {
  */
 export async function refineWithOpenAI(text, apiKey, settings) {
   const { model = 'gpt-4o-mini', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
-  
+
   const endpoint = 'https://api.openai.com/v1/chat/completions';
-  
+
   const requestBody = {
     model: model,
     messages: [
@@ -119,7 +119,7 @@ export async function refineWithOpenAI(text, apiKey, settings) {
     frequency_penalty: 0,
     presence_penalty: 0
   };
-  
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -129,24 +129,24 @@ export async function refineWithOpenAI(text, apiKey, settings) {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.choices || data.choices.length === 0) {
       throw new Error('No response generated from OpenAI');
     }
-    
+
     const refinedText = data.choices[0].message?.content;
-    
+
     if (!refinedText) {
       throw new Error('Empty response from OpenAI');
     }
-    
+
     return refinedText.trim();
   } catch (error) {
     if (error.message.includes('Incorrect API key')) {
@@ -171,9 +171,9 @@ export async function refineWithOpenAI(text, apiKey, settings) {
  */
 export async function refineWithClaude(text, apiKey, settings) {
   const { model = 'claude-3-5-sonnet-20241022', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
-  
+
   const endpoint = 'https://api.anthropic.com/v1/messages';
-  
+
   const requestBody = {
     model: model,
     max_tokens: maxTokens,
@@ -186,7 +186,7 @@ export async function refineWithClaude(text, apiKey, settings) {
     ],
     temperature: temperature
   };
-  
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -198,24 +198,24 @@ export async function refineWithClaude(text, apiKey, settings) {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error?.message || `Claude API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.content || data.content.length === 0) {
       throw new Error('No response generated from Claude');
     }
-    
+
     const refinedText = data.content[0]?.text;
-    
+
     if (!refinedText) {
       throw new Error('Empty response from Claude');
     }
-    
+
     return refinedText.trim();
   } catch (error) {
     if (error.message.includes('invalid_api_key')) {
@@ -238,7 +238,7 @@ export async function refineWithClaude(text, apiKey, settings) {
  */
 export async function refineWithCustom(text, endpoint, apiKey, settings) {
   const { temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
-  
+
   // Use OpenAI-compatible format as it's the most common
   const requestBody = {
     model: settings.model || 'default',
@@ -255,7 +255,7 @@ export async function refineWithCustom(text, endpoint, apiKey, settings) {
     temperature: temperature,
     max_tokens: maxTokens
   };
-  
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -265,7 +265,7 @@ export async function refineWithCustom(text, endpoint, apiKey, settings) {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       let errorMessage;
@@ -277,12 +277,12 @@ export async function refineWithCustom(text, endpoint, apiKey, settings) {
       }
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
-    
+
     // Try to extract text from various response formats
     let refinedText;
-    
+
     // OpenAI format
     if (data.choices && data.choices[0]?.message?.content) {
       refinedText = data.choices[0].message.content;
@@ -310,7 +310,7 @@ export async function refineWithCustom(text, endpoint, apiKey, settings) {
     else {
       throw new Error('Unable to parse response from custom API. Check the endpoint format.');
     }
-    
+
     return refinedText.trim();
   } catch (error) {
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {

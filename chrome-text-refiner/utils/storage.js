@@ -9,19 +9,20 @@
 export const DEFAULT_SETTINGS = {
   // Extension state
   enabled: true,
-  
+
   // LLM Provider settings
   provider: 'gemini',
   customEndpoint: '',
-  apiKey: '',
-  model: 'gemini-1.5-flash',
+  apiKey: '', // Legacy support / Current active key
+  apiKeys: {}, // Storage for multiple keys: { gemini: '', openai: '', ... }
+  model: 'gemini-2.5-flash',
   temperature: 0.7,
-  maxTokens: 1024,
-  
+  maxTokens: 65536,
+
   // Refinement settings
   style: 'professional',
   customInstructions: '',
-  
+
   // UI settings
   showOnHoverOnly: false,
   enableKeyboardShortcut: true,
@@ -51,7 +52,7 @@ export async function saveSettings(settings) {
   return new Promise((resolve, reject) => {
     // Validate settings before saving
     const validatedSettings = validateSettings(settings);
-    
+
     chrome.storage.sync.set(validatedSettings, () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
@@ -124,33 +125,33 @@ export async function resetSettings() {
  */
 function validateSettings(settings) {
   const validated = { ...settings };
-  
+
   // Validate provider
   const validProviders = ['gemini', 'openai', 'anthropic', 'custom'];
   if (!validProviders.includes(validated.provider)) {
     validated.provider = DEFAULT_SETTINGS.provider;
   }
-  
+
   // Validate temperature (0-1)
-  if (typeof validated.temperature !== 'number' || 
-      validated.temperature < 0 || 
-      validated.temperature > 1) {
+  if (typeof validated.temperature !== 'number' ||
+    validated.temperature < 0 ||
+    validated.temperature > 1) {
     validated.temperature = DEFAULT_SETTINGS.temperature;
   }
-  
+
   // Validate maxTokens (100-4096)
-  if (typeof validated.maxTokens !== 'number' || 
-      validated.maxTokens < 100 || 
-      validated.maxTokens > 4096) {
+  if (typeof validated.maxTokens !== 'number' ||
+    validated.maxTokens < 1 ||
+    validated.maxTokens > 65536) {
     validated.maxTokens = DEFAULT_SETTINGS.maxTokens;
   }
-  
+
   // Validate style
   const validStyles = ['professional', 'casual', 'concise', 'creative', 'custom'];
   if (!validStyles.includes(validated.style)) {
     validated.style = DEFAULT_SETTINGS.style;
   }
-  
+
   // Validate boolean settings
   const booleanSettings = ['enabled', 'showOnHoverOnly', 'enableKeyboardShortcut', 'enableUndo', 'darkMode'];
   booleanSettings.forEach(key => {
@@ -158,7 +159,7 @@ function validateSettings(settings) {
       validated[key] = DEFAULT_SETTINGS[key];
     }
   });
-  
+
   // Sanitize string settings
   const stringSettings = ['apiKey', 'customEndpoint', 'customInstructions', 'model'];
   stringSettings.forEach(key => {
@@ -166,7 +167,12 @@ function validateSettings(settings) {
       validated[key] = DEFAULT_SETTINGS[key];
     }
   });
-  
+
+  // Validate apiKeys object
+  if (typeof validated.apiKeys !== 'object' || validated.apiKeys === null) {
+    validated.apiKeys = {};
+  }
+
   return validated;
 }
 
@@ -181,9 +187,9 @@ export function onSettingsChange(callback) {
       callback(changes, areaName);
     }
   };
-  
+
   chrome.storage.onChanged.addListener(listener);
-  
+
   // Return unsubscribe function
   return () => {
     chrome.storage.onChanged.removeListener(listener);
@@ -227,14 +233,14 @@ export async function importSettings(jsonString) {
   try {
     const imported = JSON.parse(jsonString);
     const current = await getSettings();
-    
+
     // Merge imported settings with current, keeping API key
     const merged = {
       ...current,
       ...imported,
       apiKey: current.apiKey // Preserve API key
     };
-    
+
     await saveSettings(merged);
   } catch (error) {
     throw new Error('Invalid settings format');

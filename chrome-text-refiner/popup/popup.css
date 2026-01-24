@@ -191,6 +191,24 @@ body {
   margin-top: 4px;
 }
 
+.hint-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.hint-link:hover {
+  text-decoration: underline;
+}
+
+.api-help {
+  background-color: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  border-left: 3px solid var(--primary-color);
+}
+
 /* Input Styles */
 .input,
 .select,
@@ -336,6 +354,13 @@ body {
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition-fast);
+}
+
+.btn-small {
+  flex: none;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
 }
 
 .btn-primary {
