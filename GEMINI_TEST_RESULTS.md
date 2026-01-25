@@ -1,7 +1,7 @@
 # Gemini API Test Results - January 24, 2026
 
 ## API Key Tested
-`AIzaSyBdMEBELnqVrz7RR3P2-BUkJ_mQjid115w`
+`Use_Your_API_key`
 
 ## Summary
 ✅ **2 out of 7 models are fully working with this API key**
@@ -134,7 +134,7 @@ Files updated:
 🎉 **Extension is ready to use!**
 - Load the extension in Chrome
 - Select "Google Gemini" as provider
-- Enter API key: `AIzaSyBdMEBELnqVrz7RR3P2-BUkJ_mQjid115w`
+- Enter API key: `Use_Your_API_key`
 - Select model: "Gemini 2.5 Flash (Recommended)"
 - Click "Test API Key" → Should see ✅ "API key is working!"
 - Start refining text!

@@ -2,7 +2,7 @@
  * Final test - verify the models work with the extension API format
  */
 
-const API_KEY = 'AIzaSyBdMEBELnqVrz7RR3P2-BUkJ_mQjid115w';
+const API_KEY = 'Use_Your_API_key';
 
 const WORKING_MODELS = [
   'gemini-2.5-flash',

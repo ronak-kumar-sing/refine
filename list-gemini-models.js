@@ -2,7 +2,7 @@
  * Get list of available Gemini models from the API
  */
 
-const API_KEY = 'AIzaSyBdMEBELnqVrz7RR3P2-BUkJ_mQjid115w';
+const API_KEY = 'Use_Your_API_key';
 
 async function listModels() {
   const endpoint = `https://generativelanguage.googleapis.com/v1/models?key=${API_KEY}`;

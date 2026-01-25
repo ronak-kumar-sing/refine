@@ -2,7 +2,7 @@
  * Test script to check which Gemini models work with the API key
  */
 
-const API_KEY = 'AIzaSyBdMEBELnqVrz7RR3P2-BUkJ_mQjid115w';
+const API_KEY = 'Use_Your_API_key';
 
 const MODELS = [
   'gemini-1.5-flash',
