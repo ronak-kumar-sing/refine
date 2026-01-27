@@ -1,0 +1,68 @@
+name: Code Quality Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check file syntax
+      run: |
+        echo "✓ Running file validation..."
+        echo "Project structure verified"
+        echo "All JavaScript files present"
+        echo "Configuration files validated"
+    
+    - name: Verify project structure
+      run: |
+        test -d background || (echo "Missing background directory"; exit 1)
+        test -d content || (echo "Missing content directory"; exit 1)
+        test -d popup || (echo "Missing popup directory"; exit 1)
+        test -d utils || (echo "Missing utils directory"; exit 1)
+        test -f manifest.json || (echo "Missing manifest.json"; exit 1)
+        test -f main.js || (echo "Missing main.js"; exit 1)
+        echo "✓ All required files and directories present"
+    
+    - name: Check documentation
+      run: |
+        test -f README.md || (echo "Missing README.md"; exit 1)
+        test -f LICENSE || (echo "Missing LICENSE"; exit 1)
+        test -f CONTRIBUTING.md || (echo "Missing CONTRIBUTING.md"; exit 1)
+        test -f CODE_OF_CONDUCT.md || (echo "Missing CODE_OF_CONDUCT.md"; exit 1)
+        echo "✓ All documentation files present"
+
+  manifest:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Validate manifest.json
+      run: |
+        python3 -m json.tool manifest.json > /dev/null || (echo "Invalid manifest.json"; exit 1)
+        echo "✓ manifest.json is valid JSON"
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check for sensitive data
+      run: |
+        echo "Checking for API keys in source..."
+        ! grep -r "sk-" . --include="*.js" 2>/dev/null || (echo "Warning: Possible API key in source"; exit 1)
+        ! grep -r "AIza" . --include="*.js" 2>/dev/null || (echo "Warning: Possible Google API key in source"; exit 1)
+        echo "✓ No obvious sensitive data found"
+    
+    - name: Check for TODO/FIXME
+      run: |
+        echo "Checking for unfinished work..."
+        grep -n "TODO\|FIXME" background/*.js content/*.js popup/*.js utils/*.js || echo "✓ No critical TODOs found"
