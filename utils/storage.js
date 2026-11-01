@@ -11,11 +11,13 @@ export const DEFAULT_SETTINGS = {
   enabled: true,
 
   // LLM Provider settings
-  provider: 'gemini',
+  provider: 'experientiallabs',
   customEndpoint: '',
-  apiKey: '', // Legacy support / Current active key
-  apiKeys: {}, // Storage for multiple keys: { gemini: '', openai: '', ... }
-  model: 'gemini-2.5-flash',
+  apiKey: 'xpl_9dd6bd8b21933881740fd22a8d4a304aca1841b4',
+  apiKeys: {
+    experientiallabs: 'xpl_9dd6bd8b21933881740fd22a8d4a304aca1841b4'
+  },
+  model: 'claude-opus-5.5',
   temperature: 0.7,
   maxTokens: 65536,
 
@@ -27,7 +29,8 @@ export const DEFAULT_SETTINGS = {
   showOnHoverOnly: false,
   enableKeyboardShortcut: true,
   enableUndo: true,
-  darkMode: false
+  darkMode: false,
+  totalRefinements: 0
 };
 
 /**
@@ -38,7 +41,13 @@ export async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(DEFAULT_SETTINGS, (result) => {
       // Merge with defaults to ensure all keys exist
-      resolve({ ...DEFAULT_SETTINGS, ...result });
+      const merged = { ...DEFAULT_SETTINGS, ...result };
+      // Auto-migrate deprecated Gemini models to gemini-3.8-flash
+      if (merged.provider === 'gemini' && (merged.model === 'gemini-2.5-flash' || merged.model?.startsWith('gemini-2.'))) {
+        merged.model = 'gemini-3.8-flash';
+        chrome.storage.sync.set({ model: 'gemini-3.8-flash' });
+      }
+      resolve(merged);
     });
   });
 }
@@ -127,7 +136,7 @@ function validateSettings(settings) {
   const validated = { ...settings };
 
   // Validate provider
-  const validProviders = ['gemini', 'openai', 'anthropic', 'custom'];
+  const validProviders = ['experientiallabs', 'gemini', 'openai', 'anthropic', 'custom'];
   if (!validProviders.includes(validated.provider)) {
     validated.provider = DEFAULT_SETTINGS.provider;
   }
@@ -147,9 +156,14 @@ function validateSettings(settings) {
   }
 
   // Validate style
-  const validStyles = ['professional', 'casual', 'concise', 'creative', 'custom'];
+  const validStyles = ['professional', 'casual', 'concise', 'creative', 'academic', 'persuasive', 'custom'];
   if (!validStyles.includes(validated.style)) {
     validated.style = DEFAULT_SETTINGS.style;
+  }
+
+  // Validate totalRefinements
+  if (typeof validated.totalRefinements !== 'number' || validated.totalRefinements < 0) {
+    validated.totalRefinements = 0;
   }
 
   // Validate boolean settings

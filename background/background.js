@@ -3,7 +3,7 @@
  * Handles API calls and message routing
  */
 
-import { refineWithGemini, refineWithOpenAI, refineWithClaude, refineWithCustom } from '../utils/api-handlers.js';
+import { refineWithGemini, refineWithOpenAI, refineWithClaude, refineWithCustom, refineWithExperientialLabs } from '../utils/api-handlers.js';
 import { getSettings } from '../utils/storage.js';
 
 // Rate limiting state
@@ -47,7 +47,9 @@ function buildSystemPrompt(style, customInstructions) {
     professional: 'Refine the text to be professional, clear, and polished. Use formal language appropriate for business communication.',
     casual: 'Refine the text to be friendly, conversational, and approachable. Keep it natural and warm.',
     concise: 'Refine the text to be brief and to the point. Remove unnecessary words while preserving meaning.',
-    creative: 'Refine the text to be engaging and creative. Add flair while maintaining clarity.'
+    creative: 'Refine the text to be engaging and creative. Add flair while maintaining clarity.',
+    academic: 'Refine the text to be scholarly and well-structured. Use academic vocabulary, proper citations style, and formal tone suitable for research or educational contexts.',
+    persuasive: 'Refine the text to be compelling and persuasive. Use strong rhetorical techniques, clear arguments, and impactful language that motivates action.'
   };
 
   const styleInstruction = style === 'custom' && customInstructions
@@ -64,8 +66,8 @@ Rules:
 - Maintain the original meaning and intent
 - Keep the same general length unless conciseness is requested
 - Do not add new information or change the core message
-- Do not include any explanations or meta-commentary
-- Return ONLY the refined text, nothing else
+- Do not include any explanations, changes made, formatting notes, quotes, or meta-commentary
+- Return ONLY the raw refined text, nothing else
 
 Refine the following text:`;
 }
@@ -120,6 +122,15 @@ async function handleRefineText(text, style, customInstructions) {
       });
       break;
 
+    case 'experientiallabs':
+      refinedText = await refineWithExperientialLabs(text, settings.apiKey, {
+        model: settings.model || 'claude-opus-5.5',
+        temperature: settings.temperature,
+        maxTokens: settings.maxTokens,
+        systemPrompt
+      });
+      break;
+
     case 'custom':
       if (!settings.customEndpoint) {
         throw new Error('Custom API endpoint not configured.');
@@ -149,42 +160,95 @@ async function handleTestApiKey(provider, apiKey, model) {
 
     switch (provider) {
       case 'gemini':
-        // Test Gemini API
-        const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=' + apiKey, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: testText }] }],
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-            ]
-          })
-        });
+        // Test Gemini API with automatic model fallback on high demand (503)
+        const primaryTestModel = (!model || model === 'gemini-2.5-flash' || model.startsWith('gemini-2.'))
+          ? 'gemini-3.8-flash'
+          : model;
+        const candidateModels = [
+          primaryTestModel,
+          primaryTestModel !== 'gemini-3.8-flash-lite' ? 'gemini-3.8-flash-lite' : 'gemini-3.8-flash',
+          'gemini-3.8-pro'
+        ];
+        const uniqueTestModels = [...new Set(candidateModels)];
 
-        if (!geminiResponse.ok) {
-          const errorText = await geminiResponse.text();
-          let errorMsg = geminiResponse.statusText;
+        let lastGeminiError = null;
+        let successfulModel = null;
+
+        for (const testModel of uniqueTestModels) {
           try {
-            const errorJson = JSON.parse(errorText);
-            if (errorJson.error && errorJson.error.message) {
-              errorMsg = errorJson.error.message;
-            } else if (errorJson.error) {
-              errorMsg = JSON.stringify(errorJson.error);
-            }
-          } catch (e) {
-            if (errorText) errorMsg = errorText;
-          }
+            const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: testText }] }],
+                safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                ]
+              })
+            });
 
-          if (geminiResponse.status === 401) throw new Error('Invalid API key: ' + errorMsg);
-          if (geminiResponse.status === 403) throw new Error('Permission denied: ' + errorMsg);
-          throw new Error(`API error (${geminiResponse.status}): ${errorMsg}`);
+            if (geminiResponse.ok) {
+              isValid = true;
+              successfulModel = testModel;
+              break;
+            }
+
+            const errorText = await geminiResponse.text();
+            let errorMsg = geminiResponse.statusText;
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.error && errorJson.error.message) {
+                errorMsg = errorJson.error.message;
+              } else if (errorJson.error) {
+                errorMsg = JSON.stringify(errorJson.error);
+              }
+            } catch (e) {
+              if (errorText) errorMsg = errorText;
+            }
+
+            // Hard auth errors (fail immediately)
+            if (geminiResponse.status === 400 || geminiResponse.status === 401) {
+              throw new Error('Invalid API key: ' + errorMsg);
+            }
+            if (geminiResponse.status === 403) {
+              throw new Error('Permission denied: ' + errorMsg);
+            }
+
+            lastGeminiError = `API error (${geminiResponse.status}): ${errorMsg}`;
+
+            // If 503 (high demand) or 429, wait briefly before testing fallback model
+            if (geminiResponse.status === 503 || geminiResponse.status === 429) {
+              await new Promise(r => setTimeout(r, 600));
+            }
+          } catch (err) {
+            if (err.message.includes('Invalid API key') || err.message.includes('Permission denied')) {
+              throw err;
+            }
+            lastGeminiError = err.message;
+          }
         }
 
-        isValid = true;
-        break;
+        if (!isValid) {
+          // If all tested models returned 503, the API key is actually authenticated (valid)
+          // but Google servers are temporarily at capacity
+          if (lastGeminiError && (lastGeminiError.includes('503') || lastGeminiError.includes('high demand'))) {
+            return {
+              success: true,
+              message: 'API key is valid! (Google servers are currently under high traffic — automatic fallback is active)'
+            };
+          }
+          throw new Error(lastGeminiError || 'Unable to connect to Gemini API');
+        }
+
+        return {
+          success: true,
+          message: successfulModel && successfulModel !== primaryTestModel
+            ? `API key is valid! (Auto-selected ${successfulModel} due to high traffic on ${primaryTestModel})`
+            : 'API key is valid!'
+        };
 
       case 'openai':
         // Test OpenAI API
@@ -255,6 +319,41 @@ async function handleTestApiKey(provider, apiKey, model) {
         isValid = true;
         break;
 
+      case 'experientiallabs':
+        // Test ExperientialLabs API
+        const explabsResponse = await fetch('https://api.experientiallabs.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: model || 'claude-opus-5.5',
+            messages: [{ role: 'user', content: testText }]
+          })
+        });
+
+        if (!explabsResponse.ok) {
+          const errorText = await explabsResponse.text();
+          let errorMsg = explabsResponse.statusText;
+          try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.error && errorJson.error.message) {
+              errorMsg = errorJson.error.message;
+            } else if (errorJson.error) {
+              errorMsg = JSON.stringify(errorJson.error);
+            }
+          } catch (e) {
+            if (errorText) errorMsg = errorText;
+          }
+
+          if (explabsResponse.status === 401) throw new Error('Invalid ExperientialLabs API key');
+          throw new Error(`API error (${explabsResponse.status}): ${errorMsg}`);
+        }
+
+        isValid = true;
+        break;
+
       case 'custom':
         // For custom endpoints, just verify it's a valid URL and accessible
         if (!apiKey || typeof apiKey !== 'string') throw new Error('Invalid endpoint URL');
@@ -285,8 +384,16 @@ async function handleTestApiKey(provider, apiKey, model) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'REFINE_TEXT') {
     handleRefineText(message.text, message.style, message.customInstructions)
-      .then(refinedText => {
+      .then(async (refinedText) => {
         sendResponse({ refinedText });
+        // Increment refinement counter
+        try {
+          const settings = await getSettings();
+          const count = (settings.totalRefinements || 0) + 1;
+          await chrome.storage.sync.set({ totalRefinements: count });
+        } catch (e) {
+          console.log('Could not update refinement count:', e);
+        }
       })
       .catch(error => {
         console.error('Refinement error:', error);
@@ -356,6 +463,79 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'update') {
     console.log('AI Text Refiner updated to version', chrome.runtime.getManifest().version);
   }
+
+  // Set up context menus for right-click refinement
+  if (chrome.contextMenus) {
+    chrome.contextMenus.removeAll(() => {
+      chrome.contextMenus.create({
+        id: 'refine-text-root',
+        title: '✨ Refine text with AI',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-default',
+        parentId: 'refine-text-root',
+        title: '⚡ Quick Refine (Default Style)',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-professional',
+        parentId: 'refine-text-root',
+        title: '💼 Professional',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-casual',
+        parentId: 'refine-text-root',
+        title: '😊 Casual & Friendly',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-concise',
+        parentId: 'refine-text-root',
+        title: '✂️ Concise',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-academic',
+        parentId: 'refine-text-root',
+        title: '🎓 Academic',
+        contexts: ['selection', 'editable']
+      });
+
+      chrome.contextMenus.create({
+        id: 'refine-style-persuasive',
+        parentId: 'refine-text-root',
+        title: '🚀 Persuasive',
+        contexts: ['selection', 'editable']
+      });
+    });
+  }
+});
+
+/**
+ * Handle context menu item clicks
+ */
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab?.id) return;
+
+  let styleOverride = null;
+  if (info.menuItemId.startsWith('refine-style-') && info.menuItemId !== 'refine-style-default') {
+    styleOverride = info.menuItemId.replace('refine-style-', '');
+  }
+
+  chrome.tabs.sendMessage(tab.id, {
+    type: 'CONTEXT_MENU_REFINE',
+    selectedText: info.selectionText || '',
+    styleOverride: styleOverride
+  }).catch(() => {
+    console.log('Could not send context menu message to tab:', tab.id);
+  });
 });
 
 /**

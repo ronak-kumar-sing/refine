@@ -11,9 +11,20 @@
  * @returns {Promise<string>} Refined text
  */
 export async function refineWithGemini(text, apiKey, settings) {
-  const { model = 'gemini-2.5-flash', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
+  const { model = 'gemini-3.8-flash', temperature = 0.7, maxTokens = 1024, systemPrompt } = settings;
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+  // Auto-upgrade deprecated model requests to gemini-3.8-flash
+  const primaryModel = (!model || model === 'gemini-2.5-flash' || model.startsWith('gemini-2.'))
+    ? 'gemini-3.8-flash'
+    : model;
+
+  // Candidate models to try in sequence on high demand (503) or rate limit (429)
+  const modelsToTry = [
+    primaryModel,
+    primaryModel !== 'gemini-3.8-flash-lite' ? 'gemini-3.8-flash-lite' : 'gemini-3.8-flash',
+    'gemini-3.8-pro'
+  ];
+  const uniqueModels = [...new Set(modelsToTry)];
 
   const requestBody = {
     contents: [
@@ -51,42 +62,75 @@ export async function refineWithGemini(text, apiKey, settings) {
     ]
   };
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
+  let lastError = null;
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
+  for (let i = 0; i < uniqueModels.length; i++) {
+    const currentModel = uniqueModels[i];
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+
+    // Try up to 2 attempts per model for transient spikes
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.candidates || data.candidates.length === 0) {
+            throw new Error('No response generated from Gemini');
+          }
+
+          const refinedText = data.candidates[0].content?.parts?.[0]?.text;
+          if (!refinedText) {
+            throw new Error('Empty response from Gemini');
+          }
+
+          return refinedText.trim();
+        }
+
+        const error = await response.json().catch(() => ({}));
+        const errorMessage = error.error?.message || `Gemini API error: ${response.status}`;
+
+        if (errorMessage.includes('API_KEY_INVALID') || response.status === 400 || response.status === 401) {
+          throw new Error('Invalid Gemini API key. Please check your settings.');
+        }
+
+        // If 503 (high demand) or 429 (rate limit), retry or switch model
+        if (response.status === 503 || response.status === 429 || errorMessage.includes('high demand')) {
+          lastError = new Error(errorMessage);
+          if (attempt === 0) {
+            // Wait 1 second before retrying the same model
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+          // On second attempt failure, proceed to next model in cascade
+          break;
+        }
+
+        throw new Error(errorMessage);
+      } catch (err) {
+        lastError = err;
+        if (err.message.includes('Invalid Gemini API key') || err.message.includes('Permission denied')) {
+          throw err;
+        }
+        // If not a high-demand/rate-limit error, don't cascade, throw immediately
+        if (!err.message.includes('503') && !err.message.includes('high demand') && !err.message.includes('429')) {
+          throw err;
+        }
+      }
     }
-
-    const data = await response.json();
-
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('No response generated from Gemini');
-    }
-
-    const refinedText = data.candidates[0].content?.parts?.[0]?.text;
-
-    if (!refinedText) {
-      throw new Error('Empty response from Gemini');
-    }
-
-    return refinedText.trim();
-  } catch (error) {
-    if (error.message.includes('API_KEY_INVALID')) {
-      throw new Error('Invalid Gemini API key. Please check your settings.');
-    }
-    if (error.message.includes('QUOTA_EXCEEDED')) {
-      throw new Error('Gemini API quota exceeded. Please try again later.');
-    }
-    throw error;
   }
+
+  if (lastError && (lastError.message.includes('503') || lastError.message.includes('high demand'))) {
+    throw new Error('Google Gemini is experiencing high server demand right now. We attempted automatic fallback, but servers are temporarily busy. Please wait a few seconds and try again.');
+  }
+
+  throw lastError || new Error('Failed to refine text with Gemini');
 }
 
 /**
@@ -319,3 +363,78 @@ export async function refineWithCustom(text, endpoint, apiKey, settings) {
     throw error;
   }
 }
+
+/**
+ * Refine text using ExperientialLabs API (Claude Opus 5.5)
+ * @param {string} text - The text to refine
+ * @param {string} apiKey - ExperientialLabs API key
+ * @param {Object} settings - Model settings
+ * @returns {Promise<string>} Refined text
+ */
+export async function refineWithExperientialLabs(text, apiKey, settings) {
+  const { model = 'claude-opus-5.5', temperature = 0.7, systemPrompt } = settings;
+
+  const endpoint = 'https://api.experientiallabs.ai/v1/chat/completions';
+
+  const requestBody = {
+    model: model || 'claude-opus-5.5',
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: text
+      }
+    ],
+    temperature: temperature
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || error.message || `API error: ${response.status}`;
+      } catch {
+        errorMessage = `API error: ${response.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+
+    if (!data.choices || data.choices.length === 0) {
+      throw new Error('No response generated from ExperientialLabs');
+    }
+
+    const refinedText = data.choices[0].message?.content;
+
+    if (!refinedText) {
+      throw new Error('Empty response from ExperientialLabs');
+    }
+
+    let cleanText = refinedText.trim();
+    if (cleanText.startsWith('"') && cleanText.endsWith('"') && !text.trim().startsWith('"')) {
+      cleanText = cleanText.slice(1, -1).trim();
+    }
+    return cleanText;
+  } catch (error) {
+    if (error.message.includes('Incorrect API key') || error.message.includes('Unauthorized') || error.message.includes('invalid_api_key')) {
+      throw new Error('Invalid ExperientialLabs API key. Please check your settings.');
+    }
+    throw error;
+  }
+}
+

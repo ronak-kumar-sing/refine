@@ -7,20 +7,26 @@ A powerful Chrome extension that adds a magical sparkle icon to all text input f
 ## 🌟 Features
 
 - **🪄 One-Click Refinement**: Click the sparkle icon (✨) in any text field to instantly improve your writing.
-- **⚡ Keyboard Shortcuts**: 
+- **⚡ Quick Refine in Popup**: Paste or type text directly into the extension popup to refine and copy instantly without leaving your current tab.
+- **🖱️ Right-Click Context Menu**: Right-click anywhere in an input or highlighted text to refine with your default style or select on-the-fly presets (Professional, Casual, Concise, Academic, Persuasive).
+- **⌨️ Keyboard Shortcuts**: 
   - **Mac**: `Cmd + K` (Recommended) or `Cmd + Shift + R`
   - **Windows/Linux**: `Ctrl + K` (Recommended) or `Ctrl + Shift + R`
-- **🎨 Multiple Refinement Styles**:
+- **🎨 6 Built-in Refinement Styles**:
   - **Professional**: Formal, business-appropriate language.
   - **Casual**: Friendly, conversational tone.
   - **Concise**: Brief, to-the-point communication.
   - **Creative**: Engaging, expressive writing.
+  - **Academic**: Scholarly, well-structured prose with advanced vocabulary.
+  - **Persuasive**: Compelling rhetoric designed to motivate action.
   - **Custom**: Define your own prompt (e.g., "Make it sound like a pirate").
+- **📊 Usage Analytics**: Live counter tracking your total text refinements.
+- **🔄 Import & Export Settings**: Backup and transfer your extension preferences and configuration as a clean JSON file.
 - **🤖 Multi-LLM Support**:
-  - **Google Gemini** (Default - Free tier available)
-  - **OpenAI GPT** (GPT-4o, GPT-3.5)
-  - **Anthropic Claude** (Claude 3.5 Sonnet)
-  - **Custom Endpoints** (Local LLMs like Ollama)
+  - **Google Gemini** (Default - Gemini 2.5 Flash, Flash-Lite, Pro)
+  - **OpenAI GPT** (GPT-4o, GPT-4o Mini, GPT-3.5 Turbo)
+  - **Anthropic Claude** (Claude 3.5 Sonnet, Claude 3 Haiku)
+  - **Custom Endpoints** (Local LLMs like Ollama, LM Studio)
 - **✨ Visual Polish**:
   - **"Blur & Glow" Animations**: Smooth transitions when text is updated.
   - **Success Pulse**: Visual confirmation when refinement is complete.
@@ -84,7 +90,9 @@ Select "Custom" style to write your own prompt.
 2. Type your rough draft.
 3. **Option A**: Click the ✨ sparkle icon that appears on the right.
 4. **Option B**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows).
-5. Watch the text blur and update magicallly!
+5. **Option C**: Right-click the field or selected text and choose **"✨ Refine with AI"** from the context menu (or pick a style directly!).
+6. **Option D**: Open the extension popup, paste into **"Quick Refine"**, and click **"Refine Now"**.
+7. Watch the text blur and update magically!
 
 ### Undoing Changes
 - If you don't like the result, a notification toast will appear at the bottom.

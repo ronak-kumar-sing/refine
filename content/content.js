@@ -75,6 +75,14 @@ function handleMessage(message, sender, sendResponse) {
     if (activeField) {
       refineText(activeField);
     }
+  } else if (message.type === 'CONTEXT_MENU_REFINE') {
+    // Handle context menu refinement - find the active text field
+    const target = document.activeElement;
+    if (target && isTextField(target)) {
+      refineText(target, message.styleOverride);
+    } else if (activeField) {
+      refineText(activeField, message.styleOverride);
+    }
   }
 
   return true;
@@ -217,7 +225,7 @@ function createSparkleIcon(field) {
   icon.className = 'ai-refiner-icon';
   icon.innerHTML = '✨';
   icon.type = 'button';
-  icon.title = 'Refine text with AI';
+  icon.title = 'Refine text with AI (⌘K / Ctrl+K)';
   icon.setAttribute('aria-label', 'Refine text with AI');
 
   icon.style.cssText = `
@@ -243,6 +251,40 @@ function createSparkleIcon(field) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 2147483647;
   `;
+
+  // Add tooltip
+  const tooltip = document.createElement('div');
+  tooltip.className = 'ai-refiner-tooltip';
+  tooltip.textContent = 'Refine with AI';
+  tooltip.style.cssText = `
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    padding: 4px 8px;
+    background: #1e293b;
+    color: white;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 2147483647;
+  `;
+  icon.appendChild(tooltip);
+
+  // Show/hide tooltip on hover
+  icon.addEventListener('mouseenter', () => {
+    tooltip.style.opacity = '1';
+    tooltip.style.visibility = 'visible';
+  });
+  icon.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0';
+    tooltip.style.visibility = 'hidden';
+  });
 
   return icon;
 }
@@ -363,12 +405,27 @@ function getFieldText(field) {
  */
 function setFieldText(field, text) {
   if (field.tagName.toLowerCase() === 'input' || field.tagName.toLowerCase() === 'textarea') {
-    field.value = text;
-    // Trigger input event for frameworks that listen to it
+    const proto = field.tagName.toLowerCase() === 'input'
+      ? window.HTMLInputElement.prototype
+      : window.HTMLTextAreaElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (valueSetter) {
+      valueSetter.call(field, text);
+    } else {
+      field.value = text;
+    }
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
-    field.innerText = text;
+    field.focus();
+    try {
+      document.execCommand('selectAll', false, null);
+      if (!document.execCommand('insertText', false, text)) {
+        field.innerText = text;
+      }
+    } catch (e) {
+      field.innerText = text;
+    }
     field.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }
@@ -376,7 +433,7 @@ function setFieldText(field, text) {
 /**
  * Refine text using AI - Inline with Animation
  */
-async function refineText(field) {
+async function refineText(field, styleOverride = null) {
   const text = getFieldText(field).trim();
 
   if (!text) {
@@ -405,7 +462,7 @@ async function refineText(field) {
     const response = await chrome.runtime.sendMessage({
       type: 'REFINE_TEXT',
       text: text,
-      style: settings.style,
+      style: styleOverride || settings.style,
       customInstructions: settings.customInstructions
     });
 
@@ -497,6 +554,19 @@ function handleKeyboardShortcut(e) {
 }
 
 /**
+ * Handle selection refinement (select text, then refine just the selection)
+ * For contenteditable fields, this refines only the selected portion
+ */
+function handleSelectionRefine(field) {
+  const selection = window.getSelection();
+  if (selection && selection.toString().trim() && field.contains(selection.anchorNode)) {
+    // There's a selection within this field - we'll refine the whole field
+    // but this confirms user intent
+    refineText(field);
+  }
+}
+
+/**
  * Show notification toast
  */
 function showNotification(message, type = 'info') {
@@ -506,9 +576,16 @@ function showNotification(message, type = 'info') {
     existing.remove();
   }
 
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: '✨'
+  };
+
   const notification = document.createElement('div');
   notification.className = `ai-refiner-notification ai-refiner-notification-${type}`;
-  notification.textContent = message;
+  notification.innerHTML = `<span style="margin-right: 6px;">${icons[type] || icons.info}</span>${message}`;
 
   document.body.appendChild(notification);
 

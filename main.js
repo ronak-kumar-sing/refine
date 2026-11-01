@@ -55,7 +55,7 @@
  *   enabled: true,
  *   apiProvider: 'gemini',
  *   apiKey: '',
- *   model: 'gemini-2.5-flash',
+ *   model: 'gemini-3.8-flash',
  *   refinementStyle: 'professional',
  *   temperature: 0.7,
  *   maxTokens: 1000,
@@ -72,7 +72,7 @@
  * 
  * 1. Google Gemini (Default)
  *    - Free tier available
- *    - Latest models: Gemini 2.5, 2.0
+ *    - Latest models: Gemini 3.8 Flash, Flash-Lite, Pro
  *    - Endpoint: https://generativelanguage.googleapis.com
  * 
  * 2. OpenAI GPT
