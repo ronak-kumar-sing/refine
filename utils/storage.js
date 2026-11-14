@@ -258,6 +258,6 @@ export async function importSettings(jsonString) {
 
     await saveSettings(merged);
   } catch (error) {
-    throw new Error('Invalid settings format');
+    throw new Error('Invalid settings format', { cause: error });
   }
 }

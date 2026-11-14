@@ -1,0 +1,5 @@
+# Only the website is deployed; skip the extension's build output and local deps
+dist/
+node_modules/
+website/node_modules/
+website/dist/

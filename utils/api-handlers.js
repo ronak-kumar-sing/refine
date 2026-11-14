@@ -59,6 +59,7 @@ async function postJson(url, headers, body, providerName) {
   } catch (error) {
     throw new Error(
       `Could not reach ${providerName}. Check your network connection or endpoint URL. (${error.message})`,
+      { cause: error },
     );
   }
 
