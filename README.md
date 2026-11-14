@@ -4,7 +4,7 @@
 
 # AI Text Refiner
 
-**Polish any text field on the web with one click: grammar, tone, and clarity, powered by the LLM of your choice.**
+**Polish any text field on the web with one click. Natural, human-sounding rewrites, powered by the LLM of your choice.**
 
 [![CI](https://github.com/ronak-kumar-sing/refine/actions/workflows/ci.yml/badge.svg)](https://github.com/ronak-kumar-sing/refine/actions/workflows/ci.yml)
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
@@ -26,8 +26,9 @@ You bring your own API key. Text goes straight from your browser to the provider
 | --- | --- |
 | **Works everywhere** | Inputs, textareas, and `contenteditable` editors (Gmail, Slack, LinkedIn, X, Notion, …), including fields added dynamically. |
 | **Four ways to refine** | ✨ inline button · <kbd>Ctrl/⌘</kbd> + <kbd>K</kbd> or <kbd>Ctrl/⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> · right-click menu · *Quick Refine* box in the popup. |
+| **Sounds human** | One carefully written editing prompt for every provider aims for Claude Opus–level writing: plain words, natural rhythm, no stock AI phrases, and your meaning and voice kept intact. |
 | **Seven styles** | Professional, Casual, Concise, Creative, Academic, Persuasive, or your own custom instructions. |
-| **Multiple providers** | Google Gemini, OpenAI, Anthropic Claude, ExperientialLabs, or any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM). |
+| **Multiple providers** | OpenRouter (Claude Opus, GPT, Llama, DeepSeek, and more with one key), Google Gemini, OpenAI, Anthropic Claude, ExperientialLabs, or any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM). |
 | **Resilient** | Automatic retry and model fallback when Gemini is overloaded, plus client-side rate limiting. |
 | **Undo** | Revert to your original text from the toast that appears after each refinement. |
 | **Portable settings** | Export/import preferences as JSON. API keys are never included in exports. |
@@ -55,6 +56,7 @@ Works in current versions of Chrome and other Chromium-based browsers (Edge, Bra
 
 | Provider | Where to get a key | Notes |
 | --- | --- | --- |
+| OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | One key for hundreds of models. Defaults to Claude Opus 5.5, the best choice for natural-sounding writing |
 | Google Gemini *(default)* | [Google AI Studio](https://aistudio.google.com/app/apikey) | Generous free tier |
 | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | |
 | Anthropic Claude | [console.anthropic.com](https://console.anthropic.com/) | |
@@ -93,6 +95,9 @@ No build step: the extension runs directly from source. Node.js 20+ is only need
 npm install
 npm run check     # lint + format check + manifest/secret validation + unit tests
 npm run package   # builds dist/ai-text-refiner-v<version>.zip
+
+npm --prefix website install
+npm run site:dev  # showcase website at http://localhost:4173
 ```
 
 ```
@@ -102,10 +107,12 @@ npm run package   # builds dist/ai-text-refiner-v<version>.zip
 ├── popup/                 Settings UI and Quick Refine
 ├── utils/
 │   ├── api-handlers.js    One adapter per LLM provider
+│   ├── prompt.js          The editing prompt shared by all providers
 │   └── storage.js         Settings defaults, validation, import/export
 ├── icons/                 Extension icons
 ├── scripts/               Validation, packaging, and icon generation
 ├── test/                  Unit tests (node:test)
+├── website/               Showcase site (React + Vite + Tailwind), deployed to GitHub Pages
 └── docs/                  Developer documentation
 ```
 

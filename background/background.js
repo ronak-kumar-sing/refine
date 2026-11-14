@@ -6,6 +6,7 @@
  */
 
 import { refineWithProvider, ProviderBusyError } from '../utils/api-handlers.js';
+import { buildSystemPrompt } from '../utils/prompt.js';
 import { getSettings } from '../utils/storage.js';
 
 /* -------------------------------------------------------------------------- */
@@ -35,44 +36,6 @@ function getCooldownSeconds() {
   if (requestTimestamps.length === 0) return 0;
   const oldest = Math.min(...requestTimestamps);
   return Math.max(0, Math.ceil((oldest + RATE_LIMIT.windowMs - Date.now()) / 1000));
-}
-
-/* -------------------------------------------------------------------------- */
-/* Prompting                                                                  */
-/* -------------------------------------------------------------------------- */
-
-const STYLE_PROMPTS = {
-  professional:
-    'Refine the text to be professional, clear, and polished. Use formal language appropriate for business communication.',
-  casual: 'Refine the text to be friendly, conversational, and approachable. Keep it natural and warm.',
-  concise: 'Refine the text to be brief and to the point. Remove unnecessary words while preserving meaning.',
-  creative: 'Refine the text to be engaging and creative. Add flair while maintaining clarity.',
-  academic:
-    'Refine the text to be scholarly and well-structured. Use academic vocabulary, proper citations style, and formal tone suitable for research or educational contexts.',
-  persuasive:
-    'Refine the text to be compelling and persuasive. Use strong rhetorical techniques, clear arguments, and impactful language that motivates action.',
-};
-
-function buildSystemPrompt(style, customInstructions) {
-  const styleInstruction =
-    style === 'custom' && customInstructions
-      ? customInstructions
-      : (STYLE_PROMPTS[style] ?? STYLE_PROMPTS.professional);
-
-  return `You are a text refinement assistant. Your task is to improve the given text according to these guidelines:
-
-Style: ${styleInstruction}
-
-Rules:
-- Fix all grammar and spelling errors
-- Improve clarity and readability
-- Maintain the original meaning and intent
-- Keep the same general length unless conciseness is requested
-- Do not add new information or change the core message
-- Do not include any explanations, changes made, formatting notes, quotes, or meta-commentary
-- Return ONLY the raw refined text, nothing else
-
-Refine the following text:`;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -27,6 +27,12 @@ jobs:
       - run: npm test
       - run: npm run package
 
+      - name: Build website
+        working-directory: website
+        run: |
+          npm ci
+          npm run build
+
       - uses: actions/upload-artifact@v4
         with:
           name: extension-zip

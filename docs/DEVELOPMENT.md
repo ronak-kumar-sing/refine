@@ -26,7 +26,7 @@ The extension is a standard Manifest V3 extension with three runtime contexts:
 | **Content script** (`content/`) | Finds text fields, attaches the ✨ icon, handles keyboard shortcuts, replaces text with animation, offers undo. It runs as a classic script, not an ES module, and never sees API keys. |
 | **Service worker** (`background/`) | The only place that talks to LLM providers. Builds the system prompt, applies rate limiting (10 requests/minute), increments the usage counter, owns the context menu and the `refine-text` command. |
 | **Popup** (`popup/`) | Settings UI, Quick Refine, API key testing, import/export. Writes settings to storage, then pings tabs to reload. |
-| **Shared utils** (`utils/`) | `api-handlers.js` contains one adapter per provider. `storage.js` holds defaults, validation, and import/export. |
+| **Shared utils** (`utils/`) | `api-handlers.js` contains one adapter per provider. `prompt.js` builds the editing prompt shared by every provider. `storage.js` holds defaults, validation, and import/export. |
 
 ## Message reference
 
@@ -75,7 +75,19 @@ Icons can be regenerated with the helpers in `scripts/icons/`.
 
 After editing code, click **reload** on the extension card. Content scripts only update after you also refresh the page.
 
+## Website
+
+The showcase site in `website/` is a separate React 19 + Vite + Tailwind CSS v4 app that uses Motion for animations. Content lives in `website/src/data/content.js`, and each page section is a component in `website/src/components/`.
+
+```bash
+npm --prefix website install
+npm run site:dev     # http://localhost:4173
+npm run site:build   # outputs website/dist
+```
+
+`.github/workflows/pages.yml` builds and deploys it to GitHub Pages on every push to `main` that touches `website/`. To enable it once, go to **Settings → Pages → Source** and choose **GitHub Actions**.
+
 ## CI and releases
 
-- `.github/workflows/ci.yml` runs `lint`, `format:check`, `validate`, `test`, and `package` on every push to `main` and on every pull request, and uploads the zip as an artifact.
+- `.github/workflows/ci.yml` runs `lint`, `format:check`, `validate`, `test`, `package`, and a website build on every push to `main` and on every pull request, and uploads the zip as an artifact.
 - `.github/workflows/release.yml` runs on `v*` tags, checks that the tag matches `manifest.json`, and publishes a GitHub release with the zip attached.

@@ -41,6 +41,33 @@ describe('refineWithProvider', () => {
     assert.equal(init.headers['x-goog-api-key'], 'test-key');
   });
 
+  it('sends the system prompt to Gemini as a system instruction', async () => {
+    const fetchMock = mock.method(globalThis, 'fetch', async () =>
+      jsonResponse(200, { candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
+    );
+
+    await refineWithProvider('gemini', 'user text', baseOptions);
+
+    const body = JSON.parse(fetchMock.mock.calls[0].arguments[1].body);
+    assert.equal(body.systemInstruction.parts[0].text, 'Refine:');
+    assert.equal(body.contents[0].parts[0].text, 'user text');
+  });
+
+  it('calls OpenRouter with attribution headers and defaults to Claude Opus', async () => {
+    const fetchMock = mock.method(globalThis, 'fetch', async () =>
+      jsonResponse(200, { choices: [{ message: { content: 'Polished.' } }] }),
+    );
+
+    const result = await refineWithProvider('openrouter', 'polished', baseOptions);
+
+    assert.equal(result, 'Polished.');
+    const [url, init] = fetchMock.mock.calls[0].arguments;
+    assert.equal(url, 'https://openrouter.ai/api/v1/chat/completions');
+    assert.equal(init.headers.Authorization, 'Bearer test-key');
+    assert.equal(init.headers['X-Title'], 'AI Text Refiner');
+    assert.equal(JSON.parse(init.body).model, 'anthropic/claude-opus-5.5');
+  });
+
   it('upgrades retired Gemini 2.x models', async () => {
     const fetchMock = mock.method(globalThis, 'fetch', async () =>
       jsonResponse(200, { candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),

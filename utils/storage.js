@@ -138,7 +138,7 @@ function validateSettings(settings) {
   const validated = { ...settings };
 
   // Validate provider
-  const validProviders = ['experientiallabs', 'gemini', 'openai', 'anthropic', 'custom'];
+  const validProviders = ['openrouter', 'experientiallabs', 'gemini', 'openai', 'anthropic', 'custom'];
   if (!validProviders.includes(validated.provider)) {
     validated.provider = DEFAULT_SETTINGS.provider;
   }

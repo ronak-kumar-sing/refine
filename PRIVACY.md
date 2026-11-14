@@ -26,7 +26,7 @@ AI Text Refiner ("the Extension") is committed to protecting your privacy. This 
 
 When you use AI Text Refiner:
 
-1. **Your text** is sent directly from your browser to your chosen LLM provider (Google, OpenAI, Anthropic, ExperientialLabs, or your custom endpoint)
+1. **Your text** is sent directly from your browser to your chosen LLM provider (OpenRouter, Google, OpenAI, Anthropic, ExperientialLabs, or your custom endpoint)
 2. **The refined text** is returned directly to your browser
 3. **No data** passes through our servers - there are no intermediary servers
 4. **All communication** happens via HTTPS encrypted connections
@@ -38,6 +38,7 @@ When you use this extension, your text is processed by your chosen LLM provider.
 - **Google Gemini**: [Google AI Privacy](https://ai.google.dev/terms)
 - **OpenAI**: [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)
 - **Anthropic**: [Anthropic Privacy Policy](https://www.anthropic.com/privacy)
+- **OpenRouter**: [OpenRouter Privacy Policy](https://openrouter.ai/privacy). OpenRouter forwards requests to the model provider you select.
 - **ExperientialLabs**: [experientiallabs.ai](https://experientiallabs.ai)
 - **Custom endpoint**: governed by whoever operates that server
 

@@ -10,6 +10,7 @@
 
 const GEMINI_DEFAULT_MODEL = 'gemini-3.8-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-3.8-flash-lite', 'gemini-3.8-pro'];
+const OPENROUTER_DEFAULT_MODEL = 'anthropic/claude-opus-5.5';
 const RETRYABLE_STATUS = new Set([429, 503]);
 
 /** Error type for transient provider overload, so callers can treat it differently. */
@@ -120,7 +121,8 @@ export async function refineWithGemini(text, options) {
   const models = [...new Set([requested, ...GEMINI_FALLBACK_MODELS, GEMINI_DEFAULT_MODEL])];
 
   const body = {
-    contents: [{ parts: [{ text: `${systemPrompt}\n\n${text}` }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text }] }],
     generationConfig: { temperature, maxOutputTokens: maxTokens, topP: 0.95, topK: 40 },
     safetySettings: [
       'HARM_CATEGORY_HARASSMENT',
@@ -202,6 +204,24 @@ export async function refineWithExperientialLabs(text, options) {
 }
 
 /**
+ * OpenRouter: one key for hundreds of models (Claude, GPT, Gemini, Llama, ...).
+ * The attribution headers are optional and let the app appear on openrouter.ai.
+ */
+export async function refineWithOpenRouter(text, options) {
+  const data = await postJson(
+    'https://openrouter.ai/api/v1/chat/completions',
+    {
+      Authorization: `Bearer ${options.apiKey}`,
+      'HTTP-Referer': 'https://github.com/ronak-kumar-sing/refine',
+      'X-Title': 'AI Text Refiner',
+    },
+    chatCompletionBody(text, { ...options, model: options.model || OPENROUTER_DEFAULT_MODEL }),
+    'OpenRouter',
+  );
+  return cleanOutput(data.choices?.[0]?.message?.content, text);
+}
+
+/**
  * Any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM, ...).
  * Also understands a few common non-OpenAI response shapes.
  */
@@ -233,6 +253,7 @@ export const PROVIDERS = {
   gemini: refineWithGemini,
   openai: refineWithOpenAI,
   anthropic: refineWithClaude,
+  openrouter: refineWithOpenRouter,
   experientiallabs: refineWithExperientialLabs,
   custom: refineWithCustom,
 };

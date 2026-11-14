@@ -1,13 +1,14 @@
 import js from '@eslint/js';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
   {
-    ignores: ['dist/', 'node_modules/'],
+    ignores: ['dist/', 'node_modules/', 'website/dist/'],
   },
   js.configs.recommended,
   {
-    files: ['**/*.js', '**/*.mjs'],
+    files: ['**/*.js', '**/*.mjs', '**/*.jsx'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
@@ -39,5 +40,23 @@ export default [
     files: ['scripts/icons/**/*.js'],
     languageOptions: { sourceType: 'script' },
     rules: { 'no-console': 'off', 'no-unused-vars': 'off' },
+  },
+  {
+    // Showcase website (React + Vite)
+    files: ['website/src/**/*.{js,jsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    languageOptions: {
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser },
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      // JSX usage isn't tracked by core no-unused-vars without eslint-plugin-react
+      'no-unused-vars': ['error', { varsIgnorePattern: '^([A-Z]|motion$)', argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['website/vite.config.js'],
+    languageOptions: { globals: { ...globals.node } },
   },
 ];

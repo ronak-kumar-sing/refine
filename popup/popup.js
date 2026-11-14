@@ -10,6 +10,7 @@ let localApiKeys = {};
 
 // Where users can obtain an API key for each provider
 const API_KEY_URLS = {
+  openrouter: 'https://openrouter.ai/keys',
   experientiallabs: 'https://experientiallabs.ai',
   gemini: 'https://aistudio.google.com/app/apikey',
   openai: 'https://platform.openai.com/api-keys',
@@ -18,6 +19,15 @@ const API_KEY_URLS = {
 
 // Model options for each provider
 const MODEL_OPTIONS = {
+  openrouter: [
+    { value: 'anthropic/claude-opus-5.5', label: 'Claude Opus 5.5 (Best writing quality)' },
+    { value: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5 (Balanced)' },
+    { value: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5 (Fastest)' },
+    { value: 'openai/gpt-5.6-terra', label: 'GPT-5.6 Terra' },
+    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Low cost)' },
+    { value: 'meta-llama/llama-4-maverick', label: 'Llama 4 Maverick' },
+    { value: 'deepseek/deepseek-v4.1-flash', label: 'DeepSeek V4.1 Flash' },
+  ],
   experientiallabs: [{ value: 'claude-opus-5.5', label: 'Claude Opus 5.5 (Flagship AI)' }],
   gemini: [
     { value: 'gemini-3.8-flash-lite', label: 'Gemini 3.8 Flash-Lite (Fastest & High Availability)' },
@@ -38,6 +48,7 @@ const MODEL_OPTIONS = {
 
 // Provider display names
 const PROVIDER_NAMES = {
+  openrouter: 'OpenRouter',
   experientiallabs: 'ExperientialLabs',
   gemini: 'Gemini',
   openai: 'OpenAI',
@@ -211,6 +222,8 @@ function populateForm(settings) {
     (!activeModel || activeModel === 'gemini-2.5-flash' || activeModel.startsWith('gemini-2.'))
   ) {
     activeModel = 'gemini-3.8-flash';
+  } else if (settings.provider === 'openrouter' && !activeModel) {
+    activeModel = 'anthropic/claude-opus-5.5';
   } else if (settings.provider === 'experientiallabs' && !activeModel) {
     activeModel = 'claude-opus-5.5';
   }

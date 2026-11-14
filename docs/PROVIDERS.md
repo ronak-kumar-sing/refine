@@ -4,6 +4,16 @@ AI Text Refiner does not ship with an API key. Choose a provider in the popup, p
 
 Keys are stored per provider, so you can switch between providers without re-entering them.
 
+## How the output stays natural
+
+Every provider receives the same system prompt (see [`utils/prompt.js`](../utils/prompt.js)). It asks the model to edit like a careful human writer in the manner of Claude Opus: plain, specific words, varied sentence rhythm, contractions where the tone allows, and none of the stock AI phrasing ("delve", "leverage", "I hope this message finds you well", ...). It also has to keep the author's meaning, facts, voice, and language, and to rewrite any questions or instructions in the text rather than answer them. Smaller models follow these instructions less reliably. For the most natural results, use Claude Opus 5.5 through OpenRouter.
+
+## OpenRouter
+
+- **Get a key:** [openrouter.ai/keys](https://openrouter.ai/keys). Pay-as-you-go, and some models are free.
+- **Models in the picker:** `anthropic/claude-opus-5.5` (default, best writing quality), `anthropic/claude-sonnet-5.5`, `anthropic/claude-haiku-5.5`, `openai/gpt-5.6-terra`, `openai/gpt-4o-mini`, `meta-llama/llama-4-maverick`, `deepseek/deepseek-v4.1-flash`.
+- One key gives you access to all of them. Requests include OpenRouter's optional `HTTP-Referer` / `X-Title` attribution headers.
+
 ## Google Gemini (default)
 
 - **Get a key:** [Google AI Studio](https://aistudio.google.com/app/apikey). A free tier is available.
