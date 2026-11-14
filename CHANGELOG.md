@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Vercel deployment for the website (`vercel.json`): zero-config import, security headers, long-term asset caching, and skipped builds for non-website commits.
+
+### Changed
+- The GitHub Pages workflow now runs only when started manually, as an alternative to Vercel.
+
+### Fixed
+- `npm test` failed in CI on Node 22, which treats `node --test test/` as a file path. It now uses a glob.
+- Errors re-thrown in `catch` blocks keep the original error as `cause` (required by ESLint 10's `preserve-caught-error`).
+
 ## [1.1.0] - 2026-11-14
 
 ### Added

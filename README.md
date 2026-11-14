@@ -112,9 +112,15 @@ npm run site:dev  # showcase website at http://localhost:4173
 ├── icons/                 Extension icons
 ├── scripts/               Validation, packaging, and icon generation
 ├── test/                  Unit tests (node:test)
-├── website/               Showcase site (React + Vite + Tailwind), deployed to GitHub Pages
+├── website/               Showcase site (React + Vite + Tailwind), deployed on Vercel
 └── docs/                  Developer documentation
 ```
+
+### Deploying the website
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fronak-kumar-sing%2Frefine)
+
+Import the repository on [vercel.com/new](https://vercel.com/new) and keep the default settings. [`vercel.json`](vercel.json) already sets the build command, output folder, and security headers. After that, every push to `main` deploys to production and every pull request gets a preview URL.
 
 Read [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the architecture, message flow, and how to add a provider.
 

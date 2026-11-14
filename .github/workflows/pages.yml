@@ -1,9 +1,8 @@
 name: Deploy website
 
+# Optional alternative to Vercel. Runs only when started manually from the Actions tab,
+# after enabling Pages (Settings → Pages → Source: GitHub Actions).
 on:
-  push:
-    branches: [main]
-    paths: ['website/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:

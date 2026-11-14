@@ -85,7 +85,16 @@ npm run site:dev     # http://localhost:4173
 npm run site:build   # outputs website/dist
 ```
 
-`.github/workflows/pages.yml` builds and deploys it to GitHub Pages on every push to `main` that touches `website/`. To enable it once, go to **Settings → Pages → Source** and choose **GitHub Actions**.
+### Deploying on Vercel (recommended)
+
+1. Go to [vercel.com/new](https://vercel.com/new), import `ronak-kumar-sing/refine`, and click **Deploy**. Leave **Root Directory** as the repository root.
+2. That's it. [`vercel.json`](../vercel.json) tells Vercel to install and build `website/`, serve `website/dist`, add security headers (a strict CSP, `nosniff`, referrer and permissions policies), and cache hashed assets for a year.
+
+After that, pushes to `main` deploy to production and pull requests get preview deployments. The `ignoreCommand` skips builds for commits that don't touch `website/` or `vercel.json`, so extension-only changes don't trigger a deployment.
+
+### GitHub Pages (alternative)
+
+`.github/workflows/pages.yml` can deploy the same build to GitHub Pages instead. It only runs when started manually: enable Pages under **Settings → Pages → Source: GitHub Actions**, then run **Deploy website** from the Actions tab.
 
 ## CI and releases
 
