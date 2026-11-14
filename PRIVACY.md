@@ -1,6 +1,6 @@
 # Privacy Policy for AI Text Refiner
 
-**Last Updated: January 23, 2025**
+**Last updated: November 14, 2026**
 
 ## Overview
 
@@ -26,7 +26,7 @@ AI Text Refiner ("the Extension") is committed to protecting your privacy. This 
 
 When you use AI Text Refiner:
 
-1. **Your text** is sent directly from your browser to your chosen LLM provider (Google, OpenAI, Anthropic, or your custom endpoint)
+1. **Your text** is sent directly from your browser to your chosen LLM provider (OpenRouter, Google, OpenAI, Anthropic, ExperientialLabs, or your custom endpoint)
 2. **The refined text** is returned directly to your browser
 3. **No data** passes through our servers - there are no intermediary servers
 4. **All communication** happens via HTTPS encrypted connections
@@ -38,6 +38,9 @@ When you use this extension, your text is processed by your chosen LLM provider.
 - **Google Gemini**: [Google AI Privacy](https://ai.google.dev/terms)
 - **OpenAI**: [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)
 - **Anthropic**: [Anthropic Privacy Policy](https://www.anthropic.com/privacy)
+- **OpenRouter**: [OpenRouter Privacy Policy](https://openrouter.ai/privacy). OpenRouter forwards requests to the model provider you select.
+- **ExperientialLabs**: [experientiallabs.ai](https://experientiallabs.ai)
+- **Custom endpoint**: governed by whoever operates that server
 
 ## API Key Security
 
@@ -52,10 +55,11 @@ The extension requests the following permissions:
 
 | Permission | Purpose |
 |------------|---------|
-| `activeTab` | To access and modify text in the current tab's input fields |
-| `storage` | To save your settings and API keys securely |
-| `scripting` | To inject the sparkle icon into web pages |
-| Host permissions | To communicate with LLM provider APIs |
+| `activeTab` | To act on the current tab when you use the keyboard shortcut |
+| `storage` | To save your settings and API keys |
+| `contextMenus` | To add the "Refine text with AI" right-click menu |
+| Content script on all sites | To show the ✨ icon in text fields; text is only read when you trigger a refinement |
+| Host permissions | To communicate with the supported LLM provider APIs |
 
 ## Data Retention
 
@@ -84,14 +88,13 @@ We may update this privacy policy from time to time. Changes will be noted with 
 
 AI Text Refiner is open source. You can review our complete source code to verify our privacy practices:
 
-- [GitHub Repository](https://github.com/yourusername/chrome-text-refiner)
+- [GitHub Repository](https://github.com/ronak-kumar-sing/refine)
 
 ## Contact
 
 For privacy-related questions or concerns, please:
 
-1. Open an issue on our [GitHub repository](https://github.com/yourusername/chrome-text-refiner/issues)
-2. Email: privacy@example.com (replace with your contact)
+- Open an issue on the [GitHub repository](https://github.com/ronak-kumar-sing/refine/issues)
 
 ## Summary
 

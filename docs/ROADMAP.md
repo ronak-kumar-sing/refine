@@ -4,9 +4,8 @@ This document outlines the vision and planned features for AI Text Refiner.
 
 ## 📋 Current Status
 
-**Version**: 1.0.0  
-**Status**: Stable & Feature-Complete  
-**Last Updated**: January 27, 2026
+**Current version**: 1.1.0  
+**Last updated**: November 14, 2026
 
 ## 🎯 Vision
 
@@ -104,7 +103,7 @@ Help us prioritize by:
 
 **Have ideas for the roadmap?** [Share them with us!](https://github.com/ronak-kumar-sing/refine/discussions)
 
-**Want to help build these features?** [Contribute now!](CONTRIBUTING.md)
+**Want to help build these features?** [Contribute now!](../.github/CONTRIBUTING.md)
 
 ---
 

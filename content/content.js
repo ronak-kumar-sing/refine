@@ -11,7 +11,8 @@ const DEBOUNCE_DELAY = 100;
 // State management
 let settings = null;
 let activeField = null;
-let originalTexts = new Map(); // Store original text for undo
+const originalTexts = new WeakMap(); // Store original text for undo (weak: no leaks when fields are removed)
+let observer = null;
 let processedFields = new WeakSet();
 let iconElements = new WeakMap();
 
@@ -22,23 +23,31 @@ async function init() {
   // Load settings
   settings = await loadSettings();
 
-  if (!settings.enabled) {
-    return;
-  }
-
-  // Process existing text fields
-  processTextFields();
-
-  // Set up mutation observer for dynamically added fields
-  setupMutationObserver();
-
-  // Listen for settings updates
+  // Always listen, so enabling the extension from the popup takes effect without a reload.
+  // The handlers themselves check the current settings.
   chrome.runtime.onMessage.addListener(handleMessage);
+  document.addEventListener('keydown', handleKeyboardShortcut);
 
-  // Set up keyboard shortcut
-  if (settings.enableKeyboardShortcut) {
-    document.addEventListener('keydown', handleKeyboardShortcut);
+  if (settings.enabled) {
+    activate();
   }
+}
+
+/**
+ * Attach icons to existing fields and start watching for new ones
+ */
+function activate() {
+  processTextFields();
+  setupMutationObserver();
+}
+
+/**
+ * Remove icons and stop watching the DOM
+ */
+function deactivate() {
+  observer?.disconnect();
+  observer = null;
+  removeAllIcons();
 }
 
 /**
@@ -53,7 +62,7 @@ async function loadSettings() {
         enableKeyboardShortcut: result.enableKeyboardShortcut ?? true,
         enableUndo: result.enableUndo ?? true,
         style: result.style ?? 'professional',
-        customInstructions: result.customInstructions ?? ''
+        customInstructions: result.customInstructions ?? '',
       });
     });
   });
@@ -62,15 +71,24 @@ async function loadSettings() {
 /**
  * Handle messages from popup or background script
  */
-function handleMessage(message, sender, sendResponse) {
-  if (message.type === 'SETTINGS_UPDATED') {
-    settings = message.settings;
+function handleMessage(message) {
+  if (!settings) {
+    return false;
+  }
 
-    if (!settings.enabled) {
-      removeAllIcons();
-    } else {
-      processTextFields();
-    }
+  if (message.type === 'SETTINGS_UPDATED') {
+    // Re-read from storage rather than trusting the message payload, and only
+    // keep the non-sensitive fields this script needs (no API keys in page context).
+    loadSettings().then((latest) => {
+      settings = latest;
+      if (settings.enabled) {
+        activate();
+      } else {
+        deactivate();
+      }
+    });
+  } else if (!settings.enabled) {
+    return false;
   } else if (message.type === 'REFINE_ACTIVE_FIELD') {
     if (activeField) {
       refineText(activeField);
@@ -85,7 +103,8 @@ function handleMessage(message, sender, sendResponse) {
     }
   }
 
-  return true;
+  // No asynchronous response is sent
+  return false;
 }
 
 /**
@@ -93,37 +112,36 @@ function handleMessage(message, sender, sendResponse) {
  */
 function processTextFields() {
   // Find all text input elements
-  const textInputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="search"], input:not([type]), textarea');
+  const textInputs = document.querySelectorAll(
+    'input[type="text"], input[type="email"], input[type="search"], input:not([type]), textarea',
+  );
   const contentEditables = document.querySelectorAll('[contenteditable="true"]');
 
-  textInputs.forEach(field => attachIconToField(field));
-  contentEditables.forEach(field => attachIconToField(field));
+  textInputs.forEach((field) => attachIconToField(field));
+  contentEditables.forEach((field) => attachIconToField(field));
 }
 
 /**
  * Set up MutationObserver to detect dynamically added fields
  */
 function setupMutationObserver() {
-  const observer = new MutationObserver(debounce((mutations) => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(node => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // Check if the added node is a text field
-          if (isTextField(node)) {
-            attachIconToField(node);
-          }
+  if (observer) {
+    return;
+  }
 
-          // Check for text fields within the added node
-          const textFields = node.querySelectorAll?.('input[type="text"], input[type="email"], input[type="search"], input:not([type]), textarea, [contenteditable="true"]');
-          textFields?.forEach(field => attachIconToField(field));
-        }
-      });
-    });
-  }, DEBOUNCE_DELAY));
+  // Debounced full rescan: cheap because already-processed fields are skipped,
+  // and unlike debouncing the mutation list it never drops earlier batches.
+  observer = new MutationObserver(
+    debounce(() => {
+      if (settings?.enabled) {
+        processTextFields();
+      }
+    }, DEBOUNCE_DELAY),
+  );
 
   observer.observe(document.body, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
 }
 
@@ -158,13 +176,13 @@ function attachIconToField(field) {
 
   // Create wrapper if needed for positioning
   const wrapper = createIconWrapper(field);
-  const icon = createSparkleIcon(field);
+  const icon = createSparkleIcon();
 
   wrapper.appendChild(icon);
   iconElements.set(field, { wrapper, icon });
 
   // Set up event listeners
-  setupFieldListeners(field, icon, wrapper);
+  setupFieldListeners(field, icon);
 
   // Initial visibility check
   updateIconVisibility(field, icon);
@@ -220,7 +238,7 @@ function createIconWrapper(field) {
 /**
  * Create the sparkle icon element
  */
-function createSparkleIcon(field) {
+function createSparkleIcon() {
   const icon = document.createElement('button');
   icon.className = 'ai-refiner-icon';
   icon.innerHTML = '✨';
@@ -292,7 +310,7 @@ function createSparkleIcon(field) {
 /**
  * Set up event listeners for a field
  */
-function setupFieldListeners(field, icon, wrapper) {
+function setupFieldListeners(field, icon) {
   // Focus/blur events
   field.addEventListener('focus', () => {
     activeField = field;
@@ -405,9 +423,10 @@ function getFieldText(field) {
  */
 function setFieldText(field, text) {
   if (field.tagName.toLowerCase() === 'input' || field.tagName.toLowerCase() === 'textarea') {
-    const proto = field.tagName.toLowerCase() === 'input'
-      ? window.HTMLInputElement.prototype
-      : window.HTMLTextAreaElement.prototype;
+    const proto =
+      field.tagName.toLowerCase() === 'input'
+        ? window.HTMLInputElement.prototype
+        : window.HTMLTextAreaElement.prototype;
     const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     if (valueSetter) {
       valueSetter.call(field, text);
@@ -463,7 +482,7 @@ async function refineText(field, styleOverride = null) {
       type: 'REFINE_TEXT',
       text: text,
       style: styleOverride || settings.style,
-      customInstructions: settings.customInstructions
+      customInstructions: settings.customInstructions,
     });
 
     if (response.error) {
@@ -496,7 +515,7 @@ async function refineText(field, styleOverride = null) {
  * Animate text replacement
  */
 async function animateTextReplacement(field, newText) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     // 1. Lock height to prevent layout shift
     const originalHeight = field.style.height;
     const computedHeight = window.getComputedStyle(field).height;
@@ -537,7 +556,7 @@ function handleKeyboardShortcut(e) {
   // Also support the configured shortcut (default Ctrl+Shift+R)
   const isConfiguredShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R';
 
-  if ((isCmdK || isConfiguredShortcut) && settings.enableKeyboardShortcut) {
+  if ((isCmdK || isConfiguredShortcut) && settings?.enabled && settings.enableKeyboardShortcut) {
     // Check if we are focused on a text field
     const activeElement = document.activeElement;
     if (isTextField(activeElement)) {
@@ -550,19 +569,6 @@ function handleKeyboardShortcut(e) {
       e.stopPropagation();
       refineText(activeField);
     }
-  }
-}
-
-/**
- * Handle selection refinement (select text, then refine just the selection)
- * For contenteditable fields, this refines only the selected portion
- */
-function handleSelectionRefine(field) {
-  const selection = window.getSelection();
-  if (selection && selection.toString().trim() && field.contains(selection.anchorNode)) {
-    // There's a selection within this field - we'll refine the whole field
-    // but this confirms user intent
-    refineText(field);
   }
 }
 
@@ -580,7 +586,7 @@ function showNotification(message, type = 'info') {
     success: '✅',
     error: '❌',
     warning: '⚠️',
-    info: '✨'
+    info: '✨',
   };
 
   const notification = document.createElement('div');
@@ -646,9 +652,9 @@ function showUndoNotification(field) {
  * Remove all icons from the page
  */
 function removeAllIcons() {
-  document.querySelectorAll('.ai-refiner-wrapper').forEach(el => el.remove());
-  document.querySelectorAll('.ai-refiner-notification').forEach(el => el.remove());
-  document.querySelectorAll('.ai-refiner-undo').forEach(el => el.remove());
+  document.querySelectorAll('.ai-refiner-wrapper').forEach((el) => el.remove());
+  document.querySelectorAll('.ai-refiner-notification').forEach((el) => el.remove());
+  document.querySelectorAll('.ai-refiner-undo').forEach((el) => el.remove());
   processedFields = new WeakSet();
   iconElements = new WeakMap();
 }

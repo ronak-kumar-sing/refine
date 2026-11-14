@@ -5,40 +5,55 @@
 
 import { getSettings, saveSettings, DEFAULT_SETTINGS, exportSettings, importSettings } from '../utils/storage.js';
 
-// Rate limiting state (not used in popup but good to be consistent)
+// Per-provider API keys, kept in memory while the popup is open
 let localApiKeys = {};
+
+// Where users can obtain an API key for each provider
+const API_KEY_URLS = {
+  openrouter: 'https://openrouter.ai/keys',
+  experientiallabs: 'https://experientiallabs.ai',
+  gemini: 'https://aistudio.google.com/app/apikey',
+  openai: 'https://platform.openai.com/api-keys',
+  anthropic: 'https://console.anthropic.com/',
+};
 
 // Model options for each provider
 const MODEL_OPTIONS = {
-  experientiallabs: [
-    { value: 'claude-opus-5.5', label: 'Claude Opus 5.5 (Flagship AI)' }
+  openrouter: [
+    { value: 'anthropic/claude-opus-5.5', label: 'Claude Opus 5.5 (Best writing quality)' },
+    { value: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5 (Balanced)' },
+    { value: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5 (Fastest)' },
+    { value: 'openai/gpt-5.6-terra', label: 'GPT-5.6 Terra' },
+    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Low cost)' },
+    { value: 'meta-llama/llama-4-maverick', label: 'Llama 4 Maverick' },
+    { value: 'deepseek/deepseek-v4.1-flash', label: 'DeepSeek V4.1 Flash' },
   ],
+  experientiallabs: [{ value: 'claude-opus-5.5', label: 'Claude Opus 5.5 (Flagship AI)' }],
   gemini: [
     { value: 'gemini-3.8-flash-lite', label: 'Gemini 3.8 Flash-Lite (Fastest & High Availability)' },
     { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Balanced)' },
-    { value: 'gemini-3.8-pro', label: 'Gemini 3.8 Pro (Best Quality)' }
+    { value: 'gemini-3.8-pro', label: 'Gemini 3.8 Pro (Best Quality)' },
   ],
   openai: [
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
   ],
   anthropic: [
     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
   ],
-  custom: [
-    { value: 'custom', label: 'Custom Model' }
-  ]
+  custom: [{ value: 'custom', label: 'Custom Model' }],
 };
 
 // Provider display names
 const PROVIDER_NAMES = {
+  openrouter: 'OpenRouter',
   experientiallabs: 'ExperientialLabs',
   gemini: 'Gemini',
   openai: 'OpenAI',
   anthropic: 'Claude',
-  custom: 'Custom'
+  custom: 'Custom',
 };
 
 // Style display names
@@ -49,7 +64,7 @@ const STYLE_NAMES = {
   creative: 'Creative',
   academic: 'Academic',
   persuasive: 'Persuasive',
-  custom: 'Custom'
+  custom: 'Custom',
 };
 
 // DOM Elements
@@ -104,7 +119,7 @@ const elements = {
   importFile: document.getElementById('importFile'),
 
   // Toast
-  toast: document.getElementById('toast')
+  toast: document.getElementById('toast'),
 };
 
 /**
@@ -125,8 +140,9 @@ function showToast(message, type = 'info') {
   else if (type === 'warning') icon.textContent = '⚠️';
   else icon.textContent = 'ℹ️';
 
-  // Auto hide
-  setTimeout(() => {
+  // Auto hide (restart the timer if another toast replaces this one)
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
     toast.classList.remove('show');
   }, 4000);
 }
@@ -187,15 +203,13 @@ function populateForm(settings) {
   // Provider
   elements.provider.value = settings.provider;
   updateProviderUI(settings.provider);
+  updateApiKeyLink(settings.provider);
 
   // Custom endpoint
   elements.customEndpoint.value = settings.customEndpoint || '';
 
   // API settings
-  localApiKeys = settings.apiKeys || {};
-  if (!localApiKeys.experientiallabs) {
-    localApiKeys.experientiallabs = 'xpl_9dd6bd8b21933881740fd22a8d4a304aca1841b4';
-  }
+  localApiKeys = { ...(settings.apiKeys || {}) };
   // Migration for legacy single key or if apiKey is set but not in apiKeys
   if (!localApiKeys[settings.provider] && settings.apiKey) {
     localApiKeys[settings.provider] = settings.apiKey;
@@ -203,8 +217,13 @@ function populateForm(settings) {
 
   elements.apiKey.value = localApiKeys[settings.provider] || '';
   let activeModel = settings.model;
-  if (settings.provider === 'gemini' && (!activeModel || activeModel === 'gemini-2.5-flash' || activeModel.startsWith('gemini-2.'))) {
+  if (
+    settings.provider === 'gemini' &&
+    (!activeModel || activeModel === 'gemini-2.5-flash' || activeModel.startsWith('gemini-2.'))
+  ) {
     activeModel = 'gemini-3.8-flash';
+  } else if (settings.provider === 'openrouter' && !activeModel) {
+    activeModel = 'anthropic/claude-opus-5.5';
   } else if (settings.provider === 'experientiallabs' && !activeModel) {
     activeModel = 'claude-opus-5.5';
   }
@@ -258,25 +277,21 @@ async function autoSave(showNotification = false) {
       apiKeys: localApiKeys,
       model: elements.model.value,
       temperature: parseFloat(elements.temperature.value),
-      maxTokens: parseInt(elements.maxTokens.value, 10) || 65536,
+      maxTokens: parseInt(elements.maxTokens.value, 10) || DEFAULT_SETTINGS.maxTokens,
       style: elements.style.value,
       customInstructions: elements.customInstructions.value.trim(),
       showOnHoverOnly: elements.showOnHoverOnly.checked,
       enableKeyboardShortcut: elements.enableKeyboardShortcut.checked,
       enableUndo: elements.enableUndo.checked,
       darkMode: elements.darkMode.checked,
-      totalRefinements: existingSettings.totalRefinements || 0
+      totalRefinements: existingSettings.totalRefinements || 0,
     };
 
     await saveSettings(settings);
 
     // Notify background & tabs
-    chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED', settings }).catch(() => {});
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED', settings }).catch(() => {});
-      });
-    });
+    // Tell open tabs to reload settings (they read from storage; keys are never sent)
+    notifyTabs();
 
     if (showNotification) {
       showToast('Settings saved!', 'success');
@@ -284,6 +299,17 @@ async function autoSave(showNotification = false) {
   } catch (err) {
     console.error('Error auto-saving settings:', err);
   }
+}
+
+/**
+ * Ask every tab's content script to reload its settings from storage
+ */
+function notifyTabs() {
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }).catch(() => {});
+    });
+  });
 }
 
 const debouncedAutoSave = debounce(() => autoSave(false), 300);
@@ -353,8 +379,7 @@ function setupEventListeners() {
   elements.toggleApiKey.addEventListener('click', () => {
     const type = elements.apiKey.type === 'password' ? 'text' : 'password';
     elements.apiKey.type = type;
-    elements.toggleApiKey.querySelector('.eye-icon').textContent =
-      type === 'password' ? '👁️' : '🙈';
+    elements.toggleApiKey.querySelector('.eye-icon').textContent = type === 'password' ? '👁️' : '🙈';
   });
 
   // Dark mode toggle
@@ -375,16 +400,9 @@ function setupEventListeners() {
   // Get API Key link
   elements.getApiKeyLink.addEventListener('click', (e) => {
     e.preventDefault();
-    const provider = elements.provider.value;
-    const urls = {
-      experientiallabs: 'https://experientiallabs.ai',
-      gemini: 'https://aistudio.google.com/app/apikey',
-      openai: 'https://platform.openai.com/api-keys',
-      anthropic: 'https://console.anthropic.com/',
-      custom: 'https://example.com'
-    };
-    if (urls[provider]) {
-      chrome.tabs.create({ url: urls[provider] });
+    const url = API_KEY_URLS[elements.provider.value];
+    if (url) {
+      chrome.tabs.create({ url });
     }
   });
 
@@ -396,15 +414,7 @@ function setupEventListeners() {
     showToast(e.target.checked ? 'Extension enabled' : 'Extension disabled', 'success');
     updateStatus(e.target.checked ? 'Active — Ready to refine' : 'Disabled');
 
-    // Notify content scripts
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'SETTINGS_UPDATED',
-          settings
-        }).catch(() => { });
-      }
-    });
+    notifyTabs();
   });
 
   // Quick Refine button
@@ -414,11 +424,14 @@ function setupEventListeners() {
   elements.quickCopyBtn.addEventListener('click', () => {
     const text = elements.quickRefineInput.value.trim();
     if (text) {
-      navigator.clipboard.writeText(text).then(() => {
-        showToast('Copied to clipboard!', 'success');
-      }).catch(() => {
-        showToast('Failed to copy', 'error');
-      });
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          showToast('Copied to clipboard!', 'success');
+        })
+        .catch(() => {
+          showToast('Failed to copy', 'error');
+        });
     }
   });
 
@@ -463,7 +476,7 @@ async function handleQuickRefine() {
       type: 'REFINE_TEXT',
       text: text,
       style: settings.style,
-      customInstructions: settings.customInstructions
+      customInstructions: settings.customInstructions,
     });
 
     if (response.error) {
@@ -475,8 +488,8 @@ async function handleQuickRefine() {
     showToast('Text refined! Click Copy to use it.', 'success');
     updateStatus('Active — Ready to refine');
 
-    // Increment refinement counter
-    await incrementRefinementCount();
+    // The background worker increments the counter; just refresh the display
+    updateStats(await getSettings());
   } catch (error) {
     console.error('Quick refine error:', error);
     showToast(error.message || 'Failed to refine text', 'error');
@@ -484,18 +497,6 @@ async function handleQuickRefine() {
   } finally {
     elements.quickRefineBtn.disabled = false;
     elements.quickRefineBtn.classList.remove('loading');
-  }
-}
-
-/**
- * Increment the total refinement count
- */
-async function incrementRefinementCount() {
-  const settings = await getSettings();
-  const count = (settings.totalRefinements || 0) + 1;
-  await saveSettings({ ...settings, totalRefinements: count });
-  if (elements.totalRefinements) {
-    elements.totalRefinements.textContent = count.toLocaleString();
   }
 }
 
@@ -555,7 +556,7 @@ function updateModelOptions(provider, selectedModel = null) {
   const options = MODEL_OPTIONS[provider] || [];
   elements.model.innerHTML = '';
 
-  options.forEach(opt => {
+  options.forEach((opt) => {
     const option = document.createElement('option');
     option.value = opt.value;
     option.textContent = opt.label;
@@ -609,12 +610,13 @@ async function handleReset() {
   }
 
   try {
-    // Keep the API key when resetting
+    // Keep the API keys when resetting
     const currentSettings = await getSettings();
     const resetSettings = {
       ...DEFAULT_SETTINGS,
-      apiKey: currentSettings.apiKey,
-      totalRefinements: currentSettings.totalRefinements || 0
+      apiKey: currentSettings.apiKeys?.[DEFAULT_SETTINGS.provider] || '',
+      apiKeys: currentSettings.apiKeys || {},
+      totalRefinements: currentSettings.totalRefinements || 0,
     };
 
     await saveSettings(resetSettings);
@@ -635,14 +637,7 @@ async function handleReset() {
  * Update API key link based on provider
  */
 function updateApiKeyLink(provider) {
-  const urls = {
-    gemini: 'https://aistudio.google.com/app/apikey',
-    openai: 'https://platform.openai.com/api-keys',
-    anthropic: 'https://console.anthropic.com/',
-    custom: '#'
-  };
-
-  elements.getApiKeyLink.href = urls[provider] || '#';
+  elements.getApiKeyLink.href = API_KEY_URLS[provider] || '#';
 }
 
 /**
@@ -650,8 +645,14 @@ function updateApiKeyLink(provider) {
  */
 async function handleTestApi() {
   const apiKey = elements.apiKey.value.trim();
+  const provider = elements.provider.value;
+  const customEndpoint = elements.customEndpoint.value.trim();
 
-  if (!apiKey) {
+  if (provider === 'custom' && !customEndpoint) {
+    showToast('Please enter a custom endpoint URL first', 'warning');
+    return;
+  }
+  if (!apiKey && provider !== 'custom') {
     showToast('Please enter an API key first', 'warning');
     return;
   }
@@ -661,24 +662,20 @@ async function handleTestApi() {
   updateStatus('Testing API key...');
 
   try {
-    const provider = elements.provider.value;
-    const model = elements.model.value;
-    const testText = 'Hello';
-
     // Send test request to background
     const response = await chrome.runtime.sendMessage({
       type: 'TEST_API_KEY',
-      provider: provider,
-      apiKey: apiKey,
-      model: model,
-      text: testText
+      provider,
+      apiKey,
+      model: elements.model.value,
+      customEndpoint,
     });
 
     if (response.error) {
       showToast(`API Error: ${response.error}`, 'error');
       updateStatus('API key invalid');
     } else {
-      showToast('✅ API key is working!', 'success');
+      showToast(response.message || 'API key is working!', 'success');
       updateStatus('Active — API verified');
     }
   } catch (error) {

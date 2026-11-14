@@ -1,0 +1,133 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Colours are CSS variables so light/dark mode and the always-dark
+ * privacy band can swap them without `dark:` variants on every element.
+ */
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: #6366f1;
+  --color-accent-2: #8b5cf6;
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: #0f9d74;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shadow-soft: 0 8px 24px -8px rgb(23 22 31 / 0.14);
+  --shadow-float: 0 30px 60px -20px rgb(49 46 129 / 0.28), 0 12px 24px -12px rgb(23 22 31 / 0.12);
+  --shadow-glow: 0 6px 18px -6px rgb(99 102 241 / 0.6);
+
+  --animate-spin-fast: spin 0.7s linear infinite;
+  --animate-nudge: nudge 2.4s ease-in-out infinite;
+  --animate-flow: flow 2s linear infinite;
+
+  @keyframes nudge {
+    0%,
+    70%,
+    100% {
+      box-shadow: 0 1px 2px rgb(23 22 31 / 0.06);
+    }
+    80% {
+      box-shadow:
+        0 0 0 6px var(--accent-soft),
+        0 6px 16px -4px rgb(99 102 241 / 0.45);
+    }
+  }
+
+  @keyframes flow {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: 0 0;
+    }
+  }
+}
+
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --surface-2: #f4f2f7;
+  --ink: #17161f;
+  --ink-2: #3a3848;
+  --muted: #64627a;
+  --line: #e7e4ee;
+  --accent-ink: #4f46e5;
+  --accent-soft: rgb(99 102 241 / 0.1);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0b12;
+    --surface: #15141e;
+    --surface-2: #1c1a27;
+    --ink: #efeef6;
+    --ink-2: #cfcde0;
+    --muted: #9f9cb5;
+    --line: #2a2839;
+    --accent-ink: #a5b4fc;
+    --accent-soft: rgb(129 140 248 / 0.14);
+  }
+}
+
+/* Always-dark band (privacy section) */
+.theme-dark {
+  --ink: #f1f0f7;
+  --ink-2: #dcdaea;
+  --muted: #a8a5bd;
+  --line: rgb(255 255 255 / 0.1);
+  --accent-ink: #a5b4fc;
+  --surface: rgb(255 255 255 / 0.05);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    @apply bg-bg font-sans text-[17px] leading-relaxed text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply rounded-md outline-2 outline-offset-3 outline-accent;
+  }
+
+  kbd {
+    @apply inline-block min-w-[1.6em] rounded-md border border-b-2 border-line bg-surface px-[0.45em] text-center font-sans text-[0.78em] leading-normal font-semibold text-ink-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@utility text-gradient {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-brand {
+  background-image: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 70% 40%, #000 20%, transparent 75%);
+}

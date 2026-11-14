@@ -1,0 +1,39 @@
+{
+  "name": "ai-text-refiner",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Chrome extension that refines text in any input field using Gemini, OpenAI, Claude, or a custom LLM endpoint.",
+  "license": "MIT",
+  "author": "Ronak Kumar Singh",
+  "homepage": "https://github.com/ronak-kumar-sing/refine#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ronak-kumar-sing/refine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ronak-kumar-sing/refine/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "node scripts/validate.mjs",
+    "check": "npm run lint && npm run format:check && npm run validate && npm test",
+    "package": "npm run validate && node scripts/package.mjs",
+    "test": "node --test test/",
+    "site:dev": "npm --prefix website run dev",
+    "site:build": "npm --prefix website run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1"
+  }
+}

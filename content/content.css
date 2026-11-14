@@ -228,7 +228,6 @@
 
 /* Accessibility - Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-
   .ai-refiner-icon,
   .ai-refiner-notification,
   .ai-refiner-undo {

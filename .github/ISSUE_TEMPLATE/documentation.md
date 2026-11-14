@@ -14,8 +14,8 @@ What part of the documentation needs improvement?
 Where in the documentation is this issue?
 - [ ] README.md
 - [ ] CONTRIBUTING.md
-- [ ] Doc/DEVELOPMENT.md
-- [ ] Doc/API_KEY_MANAGEMENT.md
+- [ ] docs/DEVELOPMENT.md
+- [ ] docs/PROVIDERS.md
 - [ ] Other: [specify]
 
 ## 🐛 The Problem

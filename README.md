@@ -1,160 +1,127 @@
-# ✨ AI Text Refiner - Complete Guide
+<div align="center">
 
-A powerful Chrome extension that adds a magical sparkle icon to all text input fields, allowing you to refine your text instantly with AI-powered grammar, style, and clarity improvements.
+<img src="icons/icon128.png" alt="AI Text Refiner logo" width="96" height="96" />
 
-![AI Text Refiner Banner](icons/icon128.png)
+# AI Text Refiner
 
-## 🌟 Features
+**Polish any text field on the web with one click. Natural, human-sounding rewrites, powered by the LLM of your choice.**
 
-- **🪄 One-Click Refinement**: Click the sparkle icon (✨) in any text field to instantly improve your writing.
-- **⚡ Quick Refine in Popup**: Paste or type text directly into the extension popup to refine and copy instantly without leaving your current tab.
-- **🖱️ Right-Click Context Menu**: Right-click anywhere in an input or highlighted text to refine with your default style or select on-the-fly presets (Professional, Casual, Concise, Academic, Persuasive).
-- **⌨️ Keyboard Shortcuts**: 
-  - **Mac**: `Cmd + K` (Recommended) or `Cmd + Shift + R`
-  - **Windows/Linux**: `Ctrl + K` (Recommended) or `Ctrl + Shift + R`
-- **🎨 6 Built-in Refinement Styles**:
-  - **Professional**: Formal, business-appropriate language.
-  - **Casual**: Friendly, conversational tone.
-  - **Concise**: Brief, to-the-point communication.
-  - **Creative**: Engaging, expressive writing.
-  - **Academic**: Scholarly, well-structured prose with advanced vocabulary.
-  - **Persuasive**: Compelling rhetoric designed to motivate action.
-  - **Custom**: Define your own prompt (e.g., "Make it sound like a pirate").
-- **📊 Usage Analytics**: Live counter tracking your total text refinements.
-- **🔄 Import & Export Settings**: Backup and transfer your extension preferences and configuration as a clean JSON file.
-- **🤖 Multi-LLM Support**:
-  - **Google Gemini** (Default - Gemini 2.5 Flash, Flash-Lite, Pro)
-  - **OpenAI GPT** (GPT-4o, GPT-4o Mini, GPT-3.5 Turbo)
-  - **Anthropic Claude** (Claude 3.5 Sonnet, Claude 3 Haiku)
-  - **Custom Endpoints** (Local LLMs like Ollama, LM Studio)
-- **✨ Visual Polish**:
-  - **"Blur & Glow" Animations**: Smooth transitions when text is updated.
-  - **Success Pulse**: Visual confirmation when refinement is complete.
-  - **Loading States**: Integrated spinner inside the icon.
-- **↩️ Undo Support**: Easily revert changes if you prefer the original text.
-- **🛡️ Privacy First**: Your API keys are stored locally in Chrome. Text is sent *only* to your chosen AI provider.
+[![CI](https://github.com/ronak-kumar-sing/refine/actions/workflows/ci.yml/badge.svg)](https://github.com/ronak-kumar-sing/refine/actions/workflows/ci.yml)
+[![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+</div>
 
 ---
 
-## 📥 Installation
+## Overview
 
-Since this is a developer-mode extension, follow these steps to install it:
+AI Text Refiner is a Chrome extension that adds a small ✨ button to text inputs, textareas, and rich-text editors on any website. Click it (or press a shortcut) and your draft is rewritten in the style you choose, in place, with a one-click undo.
 
-1. **Download the Code**:
-   - Clone this repository or download the source code folder.
+You bring your own API key. Text goes straight from your browser to the provider you pick. There is no middleman server, no analytics, and no tracking.
 
-2. **Load in Chrome**:
-   - Open Chrome and navigate to `chrome://extensions/`.
-   - Toggle **Developer mode** (top right corner).
-   - Click **Load unpacked** (top left).
-   - Select the `chrome-text-refiner` folder.
+## Features
 
-3. **Pin the Extension**:
-   - Click the puzzle piece icon in Chrome's toolbar.
-   - Click the pin icon 📌 next to "AI Text Refiner" for easy access to settings.
+| | |
+| --- | --- |
+| **Works everywhere** | Inputs, textareas, and `contenteditable` editors (Gmail, Slack, LinkedIn, X, Notion, …), including fields added dynamically. |
+| **Four ways to refine** | ✨ inline button · <kbd>Ctrl/⌘</kbd> + <kbd>K</kbd> or <kbd>Ctrl/⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> · right-click menu · *Quick Refine* box in the popup. |
+| **Sounds human** | One carefully written editing prompt for every provider aims for Claude Opus–level writing: plain words, natural rhythm, no stock AI phrases, and your meaning and voice kept intact. |
+| **Seven styles** | Professional, Casual, Concise, Creative, Academic, Persuasive, or your own custom instructions. |
+| **Multiple providers** | OpenRouter (Claude Opus, GPT, Llama, DeepSeek, and more with one key), Google Gemini, OpenAI, Anthropic Claude, ExperientialLabs, or any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM). |
+| **Resilient** | Automatic retry and model fallback when Gemini is overloaded, plus client-side rate limiting. |
+| **Undo** | Revert to your original text from the toast that appears after each refinement. |
+| **Portable settings** | Export/import preferences as JSON. API keys are never included in exports. |
+| **Polished UI** | Dark mode, smooth blur-and-glow transitions, and respect for `prefers-reduced-motion`. |
 
----
+## Installation
 
-## ⚙️ Configuration
+### From source (developer mode)
 
-Click the extension icon in your toolbar to open the settings panel.
+1. Download the [latest release](https://github.com/ronak-kumar-sing/refine/releases/latest) zip and extract it, **or** clone the repository:
+   ```bash
+   git clone https://github.com/ronak-kumar-sing/refine.git
+   ```
+2. Open `chrome://extensions` and enable **Developer mode** (top-right).
+3. Click **Load unpacked** and select the extracted folder (the one containing `manifest.json`).
+4. Pin **AI Text Refiner** from the puzzle-piece menu for quick access.
 
-### 1. API Setup (Required)
-You need an API key from one of the providers. 
+Works in current versions of Chrome and other Chromium-based browsers (Edge, Brave, Arc).
 
-- **Google Gemini** (Recommended for free usage):
-  1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
-  2. Create a new API Key.
-  3. Paste it into the extension settings and select "Google Gemini".
+## Configuration
 
-- **OpenAI / Anthropic**:
-  - Get keys from [OpenAI Platform](https://platform.openai.com/api-keys) or [Anthropic Console](https://console.anthropic.com/).
+1. Click the extension icon to open settings.
+2. Choose a **provider** and paste your **API key**. Use the **Get one here →** link to open the provider's key page.
+3. Click **Test API Key** to verify it, then pick a **model** and **style**.
 
-### 2. Max Tokens (Important for Long Text)
-If you plan to generating long content (like full emails or articles), increase the **Max Tokens** setting.
-- **Default**: `2048`
-- **Maximum**: `65536`
-- *Tip: If text gets cut off, increase this value to 4096 or higher.*
+| Provider | Where to get a key | Notes |
+| --- | --- | --- |
+| OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | One key for hundreds of models. Defaults to Claude Opus 5.5, the best choice for natural-sounding writing |
+| Google Gemini *(default)* | [Google AI Studio](https://aistudio.google.com/app/apikey) | Generous free tier |
+| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | |
+| Anthropic Claude | [console.anthropic.com](https://console.anthropic.com/) | |
+| ExperientialLabs | [experientiallabs.ai](https://experientiallabs.ai) | OpenAI-compatible API |
+| Custom | Your server | Any OpenAI-compatible `/v1/chat/completions` URL. A key is optional. |
 
-### 3. Custom Instructions
-Select "Custom" style to write your own prompt.
-- Example: *"Translate to Spanish and make it formal"*
-- Example: *"Fix grammar but keep my slang"*
+See [docs/PROVIDERS.md](docs/PROVIDERS.md) for model details and troubleshooting.
 
----
+**Tip:** If long text gets cut off, raise **Max Tokens** (default `2048`, max `65536`).
 
-## 🚀 Usage Guide
+## Usage
 
-### Refining Text
-1. Click into any text box (Gmail, Twitter, Slack, etc.).
-2. Type your rough draft.
-3. **Option A**: Click the ✨ sparkle icon that appears on the right.
-4. **Option B**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows).
-5. **Option C**: Right-click the field or selected text and choose **"✨ Refine with AI"** from the context menu (or pick a style directly!).
-6. **Option D**: Open the extension popup, paste into **"Quick Refine"**, and click **"Refine Now"**.
-7. Watch the text blur and update magically!
+1. Type a draft in any text field.
+2. Refine it in any of these ways:
+   - Click the ✨ icon on the right edge of the field
+   - Press <kbd>⌘</kbd> + <kbd>K</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>K</kbd> (Windows/Linux)
+   - Right-click → **✨ Refine text with AI** and pick a style
+   - Paste into **Quick Refine** in the popup
+3. Don't like the result? Click **Undo** on the notification.
 
-### Undoing Changes
-- If you don't like the result, a notification toast will appear at the bottom.
-- Click **"Undo"** on the notification to revert to your original text.
+Some sites (e.g. Slack) reserve <kbd>⌘/Ctrl</kbd> + <kbd>K</kbd>. Use <kbd>⌘/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> there, or rebind it at `chrome://extensions/shortcuts`.
 
-### Visual Cues
-- **Spinner**: AI is thinking.
-- **Blur**: Text is being replaced.
-- **Indigo Pulse**: Success! Text has been refined.
-- **Red Toast**: Something went wrong (check the error message).
+## Privacy
 
----
+- API keys live in `chrome.storage.sync` and are only sent to the provider you selected.
+- Your text is sent only to that provider, over HTTPS, and only when you trigger a refinement.
+- No analytics, telemetry, or third-party servers.
 
-## 🔧 Troubleshooting
+Full details: [PRIVACY.md](PRIVACY.md).
 
-### "API Error: 400 Invalid Value"
-- This usually means an issue with Safety Settings or Model compatibility.
-- *Fix*: We have updated the extension to use modern Gemini safety categories (`HARM_CATEGORY_HARASSMENT`, etc.). ensuring you are on the latest version of the code.
+## Development
 
-### Text is Cut Off / Incomplete
-- The AI hit the token limit.
-- *Fix*: Open Settings -> Increase **Max Tokens** to `4096` or `8192`.
+No build step: the extension runs directly from source. Node.js 20+ is only needed for linting, tests, and packaging.
 
-### Icon Not Appearing
-- The extension works on standard input fields.
-- *Fix*: Refresh the page. Some single-page apps (SPAs) need a refresh to detect new fields.
-- *Check*: Ensure "Show on hover only" isn't enabled in settings if you want it always visible.
+```bash
+npm install
+npm run check     # lint + format check + manifest/secret validation + unit tests
+npm run package   # builds dist/ai-text-refiner-v<version>.zip
 
-### Shortcuts Not Working
-- *Fix*: Go to `chrome://extensions/shortcuts` and check if `Cmd+K` or `Ctrl+Shift+R` is assigned to AI Text Refiner.
-- *Note*: Some websites capture these keys (e.g., Slack uses Cmd+K for channel switcher). In those cases, click the icon manually.
-
----
-
-## 👨‍💻 Developer Guide
-
-### File Structure
-```
-chrome-text-refiner/
-├── manifest.json          # V3 Manifest config
-├── popup/                 # Settings UI
-│   ├── popup.html
-│   ├── popup.js
-│   └── popup.css
-├── content/               # Injected Script
-│   ├── content.js         # Logic: Icon injection, Shortcuts, Animation
-│   └── content.css        # Styles: Animations (Blur/Pulse), Tooltips
-├── background/            # Background Worker
-│   └── background.js      # API Calls, Environment Handling
-└── utils/
-    ├── api-handlers.js    # Specific logic for Gemini/OpenAI/Claude
-    └── storage.js         # Chrome Sync Storage wrapper
+npm --prefix website install
+npm run site:dev  # showcase website at http://localhost:4173
 ```
 
-### Key Components
-- **`content.js`**: Uses a `MutationObserver` to watch for new text fields being added to the DOM dynamically.
-- **`api-handlers.js`**: specialized handlers for each LLM provider to normalize their request/response formats.
-- **`background.js`**: Handles the actual `fetch` calls to avoid CORS issues in the content script.
+```
+├── manifest.json          Extension manifest (MV3)
+├── background/            Service worker: provider calls, rate limiting, context menu, shortcuts
+├── content/               Content script: icon injection, text replacement, undo
+├── popup/                 Settings UI and Quick Refine
+├── utils/
+│   ├── api-handlers.js    One adapter per LLM provider
+│   ├── prompt.js          The editing prompt shared by all providers
+│   └── storage.js         Settings defaults, validation, import/export
+├── icons/                 Extension icons
+├── scripts/               Validation, packaging, and icon generation
+├── test/                  Unit tests (node:test)
+├── website/               Showcase site (React + Vite + Tailwind), deployed to GitHub Pages
+└── docs/                  Developer documentation
+```
 
-### Building
-No build step required! Uses native ES Modules.
+Read [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the architecture, message flow, and how to add a provider.
 
----
+## Contributing
 
-**Made with ✨ by AI Text Refiner**
+Contributions are welcome. Please read the [contributing guide](.github/CONTRIBUTING.md) and [code of conduct](.github/CODE_OF_CONDUCT.md) first. Report security issues privately as described in [SECURITY.md](.github/SECURITY.md).
+
+## License
+
+[MIT](LICENSE)
