@@ -11,15 +11,14 @@ export const DEFAULT_SETTINGS = {
   enabled: true,
 
   // LLM Provider settings
-  provider: 'experientiallabs',
+  // API keys are never bundled with the extension; users supply their own.
+  provider: 'gemini',
   customEndpoint: '',
-  apiKey: 'xpl_9dd6bd8b21933881740fd22a8d4a304aca1841b4',
-  apiKeys: {
-    experientiallabs: 'xpl_9dd6bd8b21933881740fd22a8d4a304aca1841b4'
-  },
-  model: 'claude-opus-5.5',
+  apiKey: '',
+  apiKeys: {},
+  model: 'gemini-3.8-flash',
   temperature: 0.7,
-  maxTokens: 65536,
+  maxTokens: 2048,
 
   // Refinement settings
   style: 'professional',
@@ -30,7 +29,7 @@ export const DEFAULT_SETTINGS = {
   enableKeyboardShortcut: true,
   enableUndo: true,
   darkMode: false,
-  totalRefinements: 0
+  totalRefinements: 0,
 };
 
 /**
@@ -43,7 +42,10 @@ export async function getSettings() {
       // Merge with defaults to ensure all keys exist
       const merged = { ...DEFAULT_SETTINGS, ...result };
       // Auto-migrate deprecated Gemini models to gemini-3.8-flash
-      if (merged.provider === 'gemini' && (merged.model === 'gemini-2.5-flash' || merged.model?.startsWith('gemini-2.'))) {
+      if (
+        merged.provider === 'gemini' &&
+        (merged.model === 'gemini-2.5-flash' || merged.model?.startsWith('gemini-2.'))
+      ) {
         merged.model = 'gemini-3.8-flash';
         chrome.storage.sync.set({ model: 'gemini-3.8-flash' });
       }
@@ -142,16 +144,12 @@ function validateSettings(settings) {
   }
 
   // Validate temperature (0-1)
-  if (typeof validated.temperature !== 'number' ||
-    validated.temperature < 0 ||
-    validated.temperature > 1) {
+  if (typeof validated.temperature !== 'number' || validated.temperature < 0 || validated.temperature > 1) {
     validated.temperature = DEFAULT_SETTINGS.temperature;
   }
 
-  // Validate maxTokens (100-4096)
-  if (typeof validated.maxTokens !== 'number' ||
-    validated.maxTokens < 1 ||
-    validated.maxTokens > 65536) {
+  // Validate maxTokens (1-65536)
+  if (typeof validated.maxTokens !== 'number' || validated.maxTokens < 1 || validated.maxTokens > 65536) {
     validated.maxTokens = DEFAULT_SETTINGS.maxTokens;
   }
 
@@ -168,7 +166,7 @@ function validateSettings(settings) {
 
   // Validate boolean settings
   const booleanSettings = ['enabled', 'showOnHoverOnly', 'enableKeyboardShortcut', 'enableUndo', 'darkMode'];
-  booleanSettings.forEach(key => {
+  booleanSettings.forEach((key) => {
     if (typeof validated[key] !== 'boolean') {
       validated[key] = DEFAULT_SETTINGS[key];
     }
@@ -176,7 +174,7 @@ function validateSettings(settings) {
 
   // Sanitize string settings
   const stringSettings = ['apiKey', 'customEndpoint', 'customInstructions', 'model'];
-  stringSettings.forEach(key => {
+  stringSettings.forEach((key) => {
     if (typeof validated[key] !== 'string') {
       validated[key] = DEFAULT_SETTINGS[key];
     }
@@ -220,7 +218,7 @@ export async function getStorageUsage() {
       resolve({
         bytesUsed: bytesInUse,
         bytesTotal: chrome.storage.sync.QUOTA_BYTES,
-        percentUsed: ((bytesInUse / chrome.storage.sync.QUOTA_BYTES) * 100).toFixed(2)
+        percentUsed: ((bytesInUse / chrome.storage.sync.QUOTA_BYTES) * 100).toFixed(2),
       });
     });
   });
@@ -235,6 +233,7 @@ export async function exportSettings() {
   // Remove sensitive data
   const exportable = { ...settings };
   delete exportable.apiKey;
+  delete exportable.apiKeys;
   return JSON.stringify(exportable, null, 2);
 }
 
@@ -252,7 +251,9 @@ export async function importSettings(jsonString) {
     const merged = {
       ...current,
       ...imported,
-      apiKey: current.apiKey // Preserve API key
+      // Never let an imported file overwrite locally stored credentials
+      apiKey: current.apiKey,
+      apiKeys: current.apiKeys,
     };
 
     await saveSettings(merged);

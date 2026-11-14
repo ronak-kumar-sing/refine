@@ -1,20 +1,16 @@
 {
   "manifest_version": 3,
   "name": "AI Text Refiner",
-  "version": "1.0.0",
-  "description": "Refine your text with AI - Add a magical sparkle to any text input field for instant grammar, style, and clarity improvements.",
-  "author": "AI Text Refiner",
+  "version": "1.1.0",
+  "description": "Refine any text field with AI. Fix grammar, adjust tone, and improve clarity using Gemini, OpenAI, Claude, or your own model.",
+  "author": "Ronak Kumar Singh",
+  "homepage_url": "https://github.com/ronak-kumar-sing/refine",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": [
-    "activeTab",
-    "storage",
-    "scripting",
-    "contextMenus"
-  ],
+  "permissions": ["activeTab", "storage", "contextMenus"],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "https://api.openai.com/*",
@@ -36,15 +32,9 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content/content.js"
-      ],
-      "css": [
-        "content/content.css"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
       "run_at": "document_idle"
     }
   ],
@@ -59,12 +49,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "icons/*"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
